@@ -1,0 +1,18 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- 定义渐变色 -->
+  <defs>
+    <linearGradient id="transition-gradient" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="40%" style="stop-color:#33aa76; stop-opacity:1" />
+      <stop offset="60%" style="stop-color:#cc5595; stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- 绘制白色背景正方形 -->
+  <rect width="200" height="200" fill="white" />
+
+  <!-- 绘制圆形，使用渐变色填充中间区域，使颜色过渡更自然 -->
+  <circle cx="100" cy="100" r="90" fill="url(#transition-gradient)" />
+
+  <!-- 在圆上绘制股票波动曲线，从圆的左边缘水平直径开始 -->
+  <path d="M6,100 C30,70 70,130 100,120 C130,110 160,90 190,70" stroke="white" stroke-width="8" fill="none"/>
+</svg>

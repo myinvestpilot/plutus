@@ -1,0 +1,8 @@
+{
+  "label": "原语策略",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "学习使用原语策略系统构建自定义交易策略，从基础概念到高级应用。"
+  }
+} 

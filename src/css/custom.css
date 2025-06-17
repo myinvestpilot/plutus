@@ -1,0 +1,152 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* 策引品牌色彩配置 - 专业的金融蓝色系 */
+:root {
+  --ifm-color-primary: #1677ff;
+  --ifm-color-primary-dark: #0958d9;
+  --ifm-color-primary-darker: #003eb3;
+  --ifm-color-primary-darkest: #002c8c;
+  --ifm-color-primary-light: #4096ff;
+  --ifm-color-primary-lighter: #69b1ff;
+  --ifm-color-primary-lightest: #91caff;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(22, 119, 255, 0.1);
+  
+  /* 策引专属样式变量 */
+  --ifm-color-success: #52c41a;
+  --ifm-color-warning: #faad14;
+  --ifm-color-danger: #ff4d4f;
+  --ifm-font-family-base: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Ubuntu, sans-serif;
+}
+
+/* 深色主题配色 - 保持专业感的同时确保良好的可读性 */
+[data-theme='dark'] {
+  --ifm-color-primary: #4096ff;
+  --ifm-color-primary-dark: #1677ff;
+  --ifm-color-primary-darker: #0958d9;
+  --ifm-color-primary-darkest: #003eb3;
+  --ifm-color-primary-light: #69b1ff;
+  --ifm-color-primary-lighter: #91caff;
+  --ifm-color-primary-lightest: #bae0ff;
+  --docusaurus-highlighted-code-line-bg: rgba(64, 150, 255, 0.2);
+}
+
+/* 策引专属样式增强 */
+.navbar__brand {
+  font-weight: 600;
+}
+
+.hero__title {
+  color: var(--ifm-color-primary);
+}
+
+/* 文档导航样式优化 */
+.theme-doc-sidebar-item-link {
+  border-radius: 4px;
+}
+
+.theme-doc-sidebar-item-link-level-1 {
+  font-weight: 500;
+}
+
+/* 代码块样式优化 */
+.prism-code {
+  border-radius: 8px;
+}
+
+/* 表格样式优化 */
+table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 卡片样式 */
+.card {
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+/* 主页特定样式 */
+.hero {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+[data-theme='dark'] .hero {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+}
+
+.hero__title {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.hero__subtitle {
+  font-size: 1.5rem;
+  opacity: 0.8;
+  margin-bottom: 2rem;
+}
+
+/* 功能特性区域样式 */
+.features {
+  padding: 4rem 0;
+}
+
+.features h3 {
+  font-size: 1.5rem;
+  color: var(--ifm-color-primary);
+  margin-bottom: 1rem;
+}
+
+/* 按钮样式优化 */
+.button--primary {
+  background: linear-gradient(45deg, var(--ifm-color-primary), var(--ifm-color-primary-light));
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.button--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+}
+
+.button--secondary {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.button--secondary:hover {
+  transform: translateY(-2px);
+}
+
+/* 页脚样式调整 */
+.footer {
+  background: #1c1c1c;
+  color: #d4d4d4;
+}
+
+.footer__title {
+  color: var(--ifm-color-primary-light);
+  font-weight: 600;
+}
+
+.footer__item {
+  color: #d4d4d4;
+}
+
+.footer__item:hover {
+  color: var(--ifm-color-primary-light);
+}
