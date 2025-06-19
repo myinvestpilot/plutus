@@ -80,11 +80,45 @@ const config: Config = {
       },
       items: [
         {
+          type: 'search',
+          position: 'left',
+        },
+        {
           href: 'https://www.myinvestpilot.com',
           label: '策引平台',
           position: 'right',
         },
       ],
+    },
+    algolia: {
+      // The application ID provided by Algolia
+      appId: 'RPY9177W8B',
+
+      // Public API key: it is safe to commit it
+      apiKey: '6c1f23e52766a90b179081e72321a6c6',
+
+      indexName: 'myinvestpilot',
+
+      // Optional: see doc section below
+      contextualSearch: true,
+
+      // Optional: Specify domains where the navigation should occur through window.location instead on history.push. Useful when our Algolia config crawls multiple documentation sites and we want to navigate with window.location.href to them.
+      externalUrlRegex: 'external\\.com|domain\\.com',
+
+      // Optional: Replace parts of the item URLs from Algolia. Useful when using the same search index for multiple deployments using a different baseUrl. You can use regexp or string in the `from` param. For example: localhost:3000 vs myCompany.github.io/myProject/
+      replaceSearchResultPathname: {
+        from: 'https://docs.myinvestpilot.com/',
+        to: '/docs/',
+      },
+
+      // Optional: Algolia search parameters
+      searchParameters: {},
+
+      // Optional: path for search page that enabled by default (`false` to disable it)
+      searchPagePath: 'search',
+
+      // Optional: whether the insights feature is enabled or not on Docsearch (`false` by default)
+      insights: true,
     },
     // 隐藏footer
     footer: undefined,
