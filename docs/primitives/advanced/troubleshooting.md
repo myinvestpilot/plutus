@@ -32,7 +32,7 @@ https://api.myinvestpilot.com/strategy_portfolio/portfolios/signals/myinvestpilo
 
 ## 信号分析SQL查询手册
 
-以下是策引平台提供的专业SQL查询，用于诊断策略信号的质量和合理性。
+以下是策引平台提供的9个专业SQL查询工具，用于全面诊断策略信号的质量和合理性。
 
 ### 数据表结构说明
 
@@ -42,11 +42,16 @@ https://api.myinvestpilot.com/strategy_portfolio/portfolios/signals/myinvestpilo
   - `S` (Sell/卖出) 
   - `H` (Hold/持有)
   - `E` (Empty/空仓)
-- **主要字段**: `date`(日期)、`symbol`(股票代码)、`signal`(信号类型)
+- **主要字段**: `date`(日期)、`symbol`(股票代码)、`signal`(信号类型)、`close`(收盘价)、`high`(最高价)、`low`(最低价)
 
-### 1. 信号健康检查
+### 1. 🏥 信号健康检查
 
-快速诊断数据质量，检查数据完整性、记录数量、时间范围和信号有效性：
+**信号数据质量诊断** - 快速发现数据问题
+
+检查项目：
+- 数据完整性（记录数、时间范围、股票数量）
+- 信号有效性（是否只包含B/S/H/E）
+- 基本统计信息
 
 ```sql
 -- 信号数据健康检查
@@ -77,17 +82,29 @@ SELECT
     CASE WHEN invalid_signals = 0 THEN 'All signals are valid (B/S/H/E)'
          ELSE invalid_signals || ' invalid signals found' END,
     CASE WHEN invalid_signals = 0 THEN '✅ 正常' ELSE '❌ 发现无效信号' END
+FROM health_metrics
+UNION ALL
+SELECT
+    '股票列表',
+    (SELECT GROUP_CONCAT(DISTINCT symbol) FROM trade_signals),
+    '📋 详细信息'
 FROM health_metrics;
 ```
 
-### 2. 信号切换逻辑检查
+### 2. 🔄 信号切换逻辑检查
 
-检测不符合交易逻辑的信号切换，识别异常的买卖时机：
+**信号状态切换逻辑验证** - 检测不符合交易逻辑的信号切换
 
-**正常切换逻辑**：
-- 标准流程: `E → B → H → S → E`
-- 定投场景: `H → B` (继续加仓)
-- 必须卖出: `H → E` 必须经过 `S`
+正常切换逻辑：
+- 标准流程: E -> B -> H -> S -> E
+- 定投场景: H -> B (继续加仓)
+- 必须卖出: H -> E 必须经过 S
+
+异常切换检测：
+- ❌ H -> E (跳过卖出直接空仓)
+- ❌ B -> S (买入直接卖出)
+- ❌ E -> S (空仓时卖出)
+- ❌ S -> B (卖出直接买入)
 
 ```sql
 -- 信号切换逻辑验证
@@ -138,9 +155,14 @@ ORDER BY
 LIMIT 50;
 ```
 
-### 3. 信号分布分析
+### 3. 📊 信号分布分析
 
-分析策略的交易特征和风格，了解主动交易与被动持仓的比例：
+**策略交易特征分析** - 了解策略的交易风格和活跃度
+
+分析维度：
+- 信号分布：各信号类型占比
+- 交易活跃度：主动交易 vs 被动持仓
+- 策略风格评估
 
 ```sql
 -- 信号分布和策略特征分析
@@ -191,90 +213,443 @@ FROM activity_summary
 ORDER BY count DESC NULLS LAST;
 ```
 
-### 4. 最近信号状态查询
+### 4. 📈 波动性分析
 
-查看最新的信号状态，了解当前策略的持仓情况：
+**价格波动性风险评估** - 识别高风险资产和杠杆特征
+
+分析指标：
+- 日收益率标准差（年化波动率）
+- 最大单日涨跌幅
+- 波动性排名和风险分级
+- 杠杆ETF识别
+
+风险等级：
+- 🟢 低风险: 年化波动率 < 15%
+- 🟡 中风险: 15% - 30%
+- 🔴 高风险: > 30%
 
 ```sql
--- 最近信号状态查询
+-- 波动性分析查询
+WITH daily_returns AS (
+    SELECT
+        symbol,
+        date,
+        close,
+        LAG(close) OVER (PARTITION BY symbol ORDER BY date) as prev_close,
+        CASE 
+            WHEN LAG(close) OVER (PARTITION BY symbol ORDER BY date) IS NOT NULL 
+            THEN (close - LAG(close) OVER (PARTITION BY symbol ORDER BY date)) / LAG(close) OVER (PARTITION BY symbol ORDER BY date)
+            ELSE NULL
+        END as daily_return
+    FROM trade_signals
+    WHERE close IS NOT NULL AND close > 0
+),
+volatility_stats AS (
+    SELECT
+        symbol,
+        COUNT(*) as trading_days,
+        ROUND(AVG(daily_return) * 252 * 100, 2) as annualized_return_pct,
+        ROUND(SQRT(AVG(daily_return * daily_return) - AVG(daily_return) * AVG(daily_return)) * SQRT(252) * 100, 2) as annualized_volatility_pct,
+        ROUND(MAX(daily_return) * 100, 2) as max_daily_gain_pct,
+        ROUND(MIN(daily_return) * 100, 2) as max_daily_loss_pct,
+        ROUND((MAX(close) - MIN(close)) / MIN(close) * 100, 2) as total_range_pct
+    FROM daily_returns
+    WHERE daily_return IS NOT NULL
+    GROUP BY symbol
+    HAVING COUNT(*) >= 10  -- 至少10个交易日
+)
 SELECT
-    date,
     symbol,
-    signal,
+    trading_days,
+    annualized_return_pct || '%' as annual_return,
+    annualized_volatility_pct || '%' as annual_volatility,
+    max_daily_gain_pct || '%' as max_gain,
+    max_daily_loss_pct || '%' as max_loss,
+    total_range_pct || '%' as total_range,
     CASE
-        WHEN signal = 'B' THEN '🟢 Buy'
-        WHEN signal = 'S' THEN '🔴 Sell'
-        WHEN signal = 'H' THEN '🟡 Hold'
-        WHEN signal = 'E' THEN '⚪ Empty'
-        ELSE '❓ Unknown'
-    END as signal_status
-FROM trade_signals
-WHERE date >= (SELECT date(MAX(date), '-7 days') FROM trade_signals)
-ORDER BY date DESC, symbol
-LIMIT 30;
+        WHEN annualized_volatility_pct < 15 THEN '🟢 低风险'
+        WHEN annualized_volatility_pct < 30 THEN '🟡 中风险'
+        ELSE '🔴 高风险'
+    END as risk_level,
+    CASE
+        WHEN annualized_volatility_pct > 50 OR ABS(max_daily_gain_pct) > 15 OR ABS(max_daily_loss_pct) > 15 
+        THEN '⚠️ 疑似杠杆ETF'
+        ELSE '📊 普通资产'
+    END as leverage_indicator
+FROM volatility_stats
+ORDER BY annualized_volatility_pct DESC;
 ```
 
-### 5. 交易频率分析
+### 5. 🎯 信号有效性分析
 
-分析策略的交易频率和换手率：
+**买卖信号成功率评估** - 验证信号的实际预测能力
+
+分析维度：
+- 短期成功率（5日后价格变化）
+- 中期成功率（20日后价格变化）
+- 平均收益率和风险收益比
+- 信号可靠性评级
 
 ```sql
--- 交易频率分析
-WITH trading_activity AS (
-    SELECT
+-- 分析买卖信号的有效性
+WITH signal_performance AS (
+    SELECT 
         date,
         symbol,
         signal,
-        LAG(signal) OVER (PARTITION BY symbol ORDER BY date) as prev_signal,
-        CASE WHEN signal != LAG(signal) OVER (PARTITION BY symbol ORDER BY date) 
-             THEN 1 ELSE 0 END as signal_change
+        close as signal_price,
+        LEAD(close, 5) OVER (PARTITION BY symbol ORDER BY date) as price_5d_later,
+        LEAD(close, 20) OVER (PARTITION BY symbol ORDER BY date) as price_20d_later
     FROM trade_signals
+    WHERE signal IN ('B', 'S')
 ),
-monthly_stats AS (
+effectiveness_stats AS (
     SELECT
-        strftime('%Y-%m', date) as month,
+        signal,
         COUNT(*) as total_signals,
-        SUM(signal_change) as total_changes,
-        ROUND(SUM(signal_change) * 100.0 / COUNT(*), 2) as change_rate
-    FROM trading_activity
-    WHERE prev_signal IS NOT NULL
-    GROUP BY strftime('%Y-%m', date)
+        -- 5天后的成功率
+        COUNT(CASE 
+            WHEN signal = 'B' AND price_5d_later > signal_price THEN 1
+            WHEN signal = 'S' AND price_5d_later < signal_price THEN 1
+        END) as successful_5d,
+        -- 20天后的成功率
+        COUNT(CASE 
+            WHEN signal = 'B' AND price_20d_later > signal_price THEN 1
+            WHEN signal = 'S' AND price_20d_later < signal_price THEN 1
+        END) as successful_20d,
+        -- 平均收益率
+        AVG(CASE 
+            WHEN signal = 'B' THEN (COALESCE(price_5d_later, signal_price) - signal_price) / signal_price * 100
+            WHEN signal = 'S' THEN (signal_price - COALESCE(price_5d_later, signal_price)) / signal_price * 100
+        END) as avg_return_5d
+    FROM signal_performance
+    GROUP BY signal
 )
 SELECT
-    month,
-    total_signals,
-    total_changes,
-    change_rate || '%' as change_rate_pct,
-    CASE
-        WHEN change_rate > 20 THEN '🔥 高频交易'
-        WHEN change_rate > 5 THEN '⚖️ 中频交易'
-        ELSE '💤 低频交易'
-    END as trading_style
-FROM monthly_stats
-ORDER BY month DESC;
+    CASE 
+        WHEN signal = 'B' THEN '🟢 买入信号'
+        WHEN signal = 'S' THEN '🔴 卖出信号'
+    END as signal_type,
+    total_signals || ' 次' as signal_count,
+    ROUND(successful_5d * 100.0 / total_signals, 1) || '%' as success_rate_5d,
+    ROUND(successful_20d * 100.0 / total_signals, 1) || '%' as success_rate_20d,
+    ROUND(avg_return_5d, 2) || '%' as avg_return_5d,
+    CASE 
+        WHEN successful_5d * 100.0 / total_signals > 70 THEN '🌟 优秀'
+        WHEN successful_5d * 100.0 / total_signals > 55 THEN '✅ 良好'
+        WHEN successful_5d * 100.0 / total_signals > 45 THEN '⚠️ 一般'
+        ELSE '❌ 较差'
+    END as reliability_rating
+FROM effectiveness_stats
+WHERE total_signals > 0;
 ```
 
-### 6. 指标数值分析
+### 6. ⏰ 交易时机分析
 
-如果策略包含技术指标，可以分析指标的数值分布：
+**策略交易节奏特征** - 了解策略的交易频率和持仓周期
+
+分析维度：
+- 信号间隔时间分布
+- 持仓周期统计
+- 交易活跃度评估
+- 市场时机把握能力
 
 ```sql
--- 技术指标数值分析（以RSI为例）
+-- 分析策略的时机特征
+WITH signal_gaps AS (
+    SELECT 
+        symbol,
+        date,
+        signal,
+        LAG(date) OVER (PARTITION BY symbol ORDER BY date) as prev_date,
+        LAG(signal) OVER (PARTITION BY symbol ORDER BY date) as prev_signal,
+        julianday(date) - julianday(LAG(date) OVER (PARTITION BY symbol ORDER BY date)) as days_gap
+    FROM trade_signals
+    WHERE signal IN ('B', 'S')
+),
+frequency_analysis AS (
+    SELECT
+        signal,
+        COUNT(*) as signal_count,
+        ROUND(AVG(days_gap), 1) as avg_gap_days,
+        MIN(days_gap) as min_gap_days,
+        MAX(days_gap) as max_gap_days,
+        COUNT(CASE WHEN days_gap < 7 THEN 1 END) as weekly_signals,
+        COUNT(CASE WHEN days_gap BETWEEN 7 AND 30 THEN 1 END) as monthly_signals,
+        COUNT(CASE WHEN days_gap > 30 THEN 1 END) as quarterly_signals
+    FROM signal_gaps
+    WHERE days_gap IS NOT NULL
+    GROUP BY signal
+)
+SELECT
+    CASE 
+        WHEN signal = 'B' THEN '🟢 买入信号'
+        WHEN signal = 'S' THEN '🔴 卖出信号'
+    END as signal_type,
+    signal_count || ' 次' as total_count,
+    avg_gap_days || ' 天' as avg_interval,
+    min_gap_days || '-' || max_gap_days || ' 天' as gap_range,
+    weekly_signals || '/' || monthly_signals || '/' || quarterly_signals as frequency_distribution,
+    CASE 
+        WHEN avg_gap_days < 14 THEN '🔥 高频交易 (< 2周)'
+        WHEN avg_gap_days < 60 THEN '⚖️ 中频交易 (2周-2月)'
+        ELSE '💤 低频交易 (> 2月)'
+    END as trading_style
+FROM frequency_analysis
+UNION ALL
+SELECT
+    '📊 整体特征',
+    (SELECT COUNT(*) FROM signal_gaps WHERE signal IN ('B', 'S') AND days_gap IS NOT NULL) || ' 次交易',
+    ROUND((SELECT AVG(days_gap) FROM signal_gaps WHERE days_gap IS NOT NULL), 1) || ' 天',
+    '平均交易间隔',
+    '周/月/季度分布',
+    CASE 
+        WHEN (SELECT AVG(days_gap) FROM signal_gaps WHERE days_gap IS NOT NULL) < 21 THEN '🔥 活跃策略'
+        WHEN (SELECT AVG(days_gap) FROM signal_gaps WHERE days_gap IS NOT NULL) < 90 THEN '⚖️ 平衡策略'
+        ELSE '💤 稳健策略'
+    END;
+```
+
+### 7. 🌍 市场适应性分析
+
+**策略在不同市场环境下的表现** - 评估策略的适应性和局限性
+
+分析维度：
+- 趋势市场 vs 震荡市场表现
+- 高波动 vs 低波动环境适应性
+- 信号在不同市场条件下的分布
+- 策略适用场景识别
+
+```sql
+-- 分析策略在不同市场环境下的表现
+WITH market_conditions AS (
+    SELECT 
+        date,
+        symbol,
+        close,
+        signal,
+        high,
+        low,
+        -- 计算20日移动平均来判断趋势
+        AVG(close) OVER (
+            PARTITION BY symbol 
+            ORDER BY date 
+            ROWS BETWEEN 19 PRECEDING AND CURRENT ROW
+        ) as ma20,
+        -- 计算20日波动率
+        (MAX(high) OVER (
+            PARTITION BY symbol 
+            ORDER BY date 
+            ROWS BETWEEN 19 PRECEDING AND CURRENT ROW
+        ) - MIN(low) OVER (
+            PARTITION BY symbol 
+            ORDER BY date 
+            ROWS BETWEEN 19 PRECEDING AND CURRENT ROW
+        )) / close as volatility_20d
+    FROM trade_signals
+    WHERE close IS NOT NULL AND high IS NOT NULL AND low IS NOT NULL
+),
+classified_signals AS (
+    SELECT 
+        signal,
+        CASE 
+            WHEN close > ma20 * 1.02 THEN '📈 上涨趋势'
+            WHEN close > ma20 * 0.98 THEN '📊 横盘整理'
+            ELSE '📉 下跌趋势'
+        END as market_trend,
+        CASE 
+            WHEN volatility_20d > 0.15 THEN '🌊 高波动'
+            WHEN volatility_20d > 0.08 THEN '〰️ 中波动'
+            ELSE '📏 低波动'
+        END as volatility_level
+    FROM market_conditions
+    WHERE signal IN ('B', 'S') AND ma20 IS NOT NULL AND volatility_20d IS NOT NULL
+),
+adaptation_stats AS (
+    SELECT 
+        signal,
+        market_trend,
+        volatility_level,
+        COUNT(*) as signal_count,
+        ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (PARTITION BY signal), 1) as percentage
+    FROM classified_signals
+    GROUP BY signal, market_trend, volatility_level
+)
+SELECT 
+    CASE 
+        WHEN signal = 'B' THEN '🟢 买入信号'
+        WHEN signal = 'S' THEN '🔴 卖出信号'
+    END as signal_type,
+    market_trend,
+    volatility_level,
+    signal_count || ' 次' as count,
+    percentage || '%' as proportion,
+    CASE 
+        WHEN signal = 'B' AND market_trend = '📈 上涨趋势' THEN '✅ 顺势而为'
+        WHEN signal = 'S' AND market_trend = '📉 下跌趋势' THEN '✅ 及时止损'
+        WHEN signal = 'B' AND market_trend = '📉 下跌趋势' THEN '⚠️ 抄底风险'
+        WHEN signal = 'S' AND market_trend = '📈 上涨趋势' THEN '⚠️ 过早获利'
+        ELSE '📊 中性策略'
+    END as strategy_assessment
+FROM adaptation_stats
+WHERE signal_count > 0
+ORDER BY signal, signal_count DESC;
+```
+
+### 8. ⚠️ 风险信号识别
+
+**策略潜在风险警示** - 识别可能影响策略表现的风险因素
+
+风险维度：
+- 连续错误信号
+- 极端市场条件下的表现
+- 信号密度过高警告
+- 长期空仓风险
+
+```sql
+-- 识别策略中的潜在风险信号
+WITH risk_analysis AS (
+    SELECT 
+        symbol,
+        date,
+        signal,
+        close,
+        LAG(signal, 1) OVER (PARTITION BY symbol ORDER BY date) as prev_signal_1,
+        LAG(signal, 2) OVER (PARTITION BY symbol ORDER BY date) as prev_signal_2,
+        LAG(close, 1) OVER (PARTITION BY symbol ORDER BY date) as prev_close,
+        LEAD(close, 5) OVER (PARTITION BY symbol ORDER BY date) as future_close,
+        COUNT(CASE WHEN signal IN ('B', 'S') THEN 1 END) OVER (
+            PARTITION BY symbol 
+            ORDER BY date 
+            ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+        ) as signals_30d
+    FROM trade_signals
+),
+risk_patterns AS (
+    SELECT
+        '🔄 频繁交易风险' as risk_type,
+        COUNT(*) as occurrence_count,
+        CASE 
+            WHEN COUNT(*) > 10 THEN '❌ 高风险'
+            WHEN COUNT(*) > 5 THEN '⚠️ 中风险'
+            ELSE '✅ 低风险'
+        END as risk_level,
+        '30天内交易超过' || MAX(signals_30d) || '次' as description
+    FROM risk_analysis
+    WHERE signals_30d > 8
+    
+    UNION ALL
+    
+    SELECT
+        '📉 连续错误信号' as risk_type,
+        COUNT(*) as occurrence_count,
+        CASE 
+            WHEN COUNT(*) > 3 THEN '❌ 高风险'
+            WHEN COUNT(*) > 1 THEN '⚠️ 中风险'
+            ELSE '✅ 低风险'
+        END as risk_level,
+        '发现' || COUNT(*) || '次买入后价格下跌' as description
+    FROM risk_analysis
+    WHERE signal = 'B' AND future_close < close * 0.95
+    
+    UNION ALL
+    
+    SELECT
+        '🔀 信号混乱' as risk_type,
+        COUNT(*) as occurrence_count,
+        CASE 
+            WHEN COUNT(*) > 5 THEN '❌ 高风险'
+            WHEN COUNT(*) > 2 THEN '⚠️ 中风险'
+            ELSE '✅ 低风险'
+        END as risk_level,
+        '发现' || COUNT(*) || '次B-S-B短期切换' as description
+    FROM risk_analysis
+    WHERE signal = 'B' AND prev_signal_1 = 'S' AND prev_signal_2 = 'B'
+    
+    UNION ALL
+    
+    SELECT
+        '💤 长期空仓' as risk_type,
+        COUNT(*) as occurrence_count,
+        CASE 
+            WHEN COALESCE(MAX(streak_days), 0) > 200 THEN '⚠️ 中风险'
+            WHEN COALESCE(MAX(streak_days), 0) > 100 THEN '📊 正常'  
+            WHEN COALESCE(MAX(streak_days), 0) > 30 THEN '✅ 活跃'
+            ELSE '🚀 极活跃'
+        END as risk_level,
+        CASE 
+            WHEN COUNT(*) = 0 THEN '未发现长期空仓'
+            ELSE '发现' || COUNT(*) || '次空仓期，最长' || COALESCE(MAX(streak_days), 0) || '天'
+        END as description
+    FROM (
+        WITH signal_groups AS (
+            SELECT
+                symbol,
+                date,
+                signal,
+                (ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY date) - 
+                 ROW_NUMBER() OVER (PARTITION BY symbol, signal ORDER BY date)) as grp
+            FROM risk_analysis
+            WHERE signal IS NOT NULL
+        ),
+        empty_streaks AS (
+            SELECT
+                symbol,
+                signal,
+                COUNT(*) as streak_days,
+                MIN(date) as start_date,
+                MAX(date) as end_date
+            FROM signal_groups
+            WHERE signal = 'E'
+            GROUP BY symbol, signal, grp
+            HAVING COUNT(*) > 30
+        )
+        SELECT 
+            symbol,
+            streak_days,
+            start_date,
+            end_date
+        FROM empty_streaks
+    ) long_empty_periods
+)
+SELECT 
+    risk_type,
+    occurrence_count,
+    risk_level,
+    description
+FROM risk_patterns
+WHERE occurrence_count > 0
+ORDER BY 
+    CASE 
+        WHEN risk_level = '❌ 高风险' THEN 1
+        WHEN risk_level = '⚠️ 中风险' THEN 2
+        ELSE 3
+    END,
+    occurrence_count DESC;
+```
+
+### 9. 🔍 自定义分析
+
+**灵活的自定义查询** - 根据需要自由查询数据
+
+使用方法：
+- 在SQL编辑器中输入自定义查询
+- 可查询任意时间段、股票、条件
+
+常用查询示例：
+- 特定日期: WHERE date = '2022-01-01'
+- 特定股票: WHERE symbol = 'AAPL'
+- 信号变化: 使用LAG()函数分析转换
+
+```sql
+-- 自定义查询模板 - 可根据需要修改
 SELECT
     date,
     symbol,
-    signal,
-    -- 假设存在RSI指标列
-    ROUND(rsi, 2) as rsi_value,
-    CASE
-        WHEN rsi > 70 THEN '🔴 超买区域'
-        WHEN rsi < 30 THEN '🟢 超卖区域'
-        ELSE '⚪ 正常区域'
-    END as rsi_zone
+    signal
 FROM trade_signals
-WHERE rsi IS NOT NULL
 ORDER BY date DESC
-LIMIT 50;
+LIMIT 100;
 ```
 
 ## 实际案例分析

@@ -1,6 +1,22 @@
-# 完整策略示例
+# 原语策略示例
 
-本文档提供了使用原语系统构建的完整交易策略示例，包括详细配置、参数优化建议和性能分析。这些示例可以作为构建自己策略的起点。
+本文档提供了使用原语系统构建的交易策略示例，包括详细配置、参数优化建议和性能分析。这些示例可以作为构建自己策略的起点。
+
+## ⚠️ 重要说明：配置类型区别
+
+本文档中的示例分为两种类型：
+
+### 原语策略配置
+- 只包含`trade_strategy`和`market_indicators`（如需要）
+- 这是您在前端原语策略页面需要配置的部分
+- 专注于交易逻辑，不包含资金管理、标的选择等
+
+### 完整组合配置
+- 包含所有参数：基本信息、交易标的、时间参数、资金管理等
+- 用于完整的回测和实盘应用
+- 包含原语策略配置作为其中的一部分
+
+**重要提醒：** 如果您的策略中使用了市场指标引用，必须同时提供`market_indicators`配置，否则回测会失败。
 
 ## RSI超买超卖策略
 
@@ -8,102 +24,91 @@
 
 这个经典策略基于RSI（相对强弱指数）的超买超卖状态，在市场超卖时买入，超买时卖出。
 
-### 完整配置
+### 原语策略配置
 
 ```json
 {
-  "name": "RSI超买超卖策略",
-  "code": "myinvestpilot_rsi_primitive",
-  "description": "基于RSI指标的简单超买超卖交易策略",
-  "strategy_definition": {
-    "trade_strategy": {
-      "indicators": [
-        {
-          "id": "rsi_indicator",
-          "type": "RSI",
-          "params": {
-            "period": 11,
-            "field": "Close"
-          }
-        },
-        {
-          "id": "upper_threshold",
-          "type": "Constant",
-          "params": {
-            "value": 63
-          }
-        },
-        {
-          "id": "lower_threshold",
-          "type": "Constant",
-          "params": {
-            "value": 37
-          }
+  "trade_strategy": {
+    "indicators": [
+      {
+        "id": "rsi_indicator",
+        "type": "RSI",
+        "params": {
+          "period": 11,
+          "field": "Close"
         }
-      ],
-      "signals": [
-        {
-          "id": "is_below_lower",
-          "type": "LessThan",
-          "epsilon": 0.5,
-          "inputs": [
-            { "ref": "rsi_indicator" },
-            { "ref": "lower_threshold" }
-          ]
-        },
-        {
-          "id": "is_above_upper",
-          "type": "GreaterThan",
-          "epsilon": 0.5,
-          "inputs": [
-            { "ref": "rsi_indicator" },
-            { "ref": "upper_threshold" }
-          ]
-        },
-        {
-          "id": "buy_signal_cross",
-          "type": "Crossunder",
-          "params": { "mode": "simple" },
-          "inputs": [
-            { "ref": "rsi_indicator" },
-            { "ref": "lower_threshold" }
-          ]
-        },
-        {
-          "id": "sell_signal_cross",
-          "type": "Crossover",
-          "params": { "mode": "simple" },
-          "inputs": [
-            { "ref": "rsi_indicator" },
-            { "ref": "upper_threshold" }
-          ]
+      },
+      {
+        "id": "upper_threshold",
+        "type": "Constant",
+        "params": {
+          "value": 63
         }
-      ],
-      "outputs": {
-        "buy_signal": "buy_signal_cross",
-        "sell_signal": "sell_signal_cross",
-        "indicators": [
-          { "id": "rsi_indicator", "output_name": "rsi" },
-          { "id": "upper_threshold", "output_name": "upper_bound" },
-          { "id": "lower_threshold", "output_name": "lower_bound" },
-          { "id": "is_below_lower", "output_name": "is_oversold" },
-          { "id": "is_above_upper", "output_name": "is_overbought" },
-          { "id": "buy_signal_cross", "output_name": "buy_signal" },
-          { "id": "sell_signal_cross", "output_name": "sell_signal" }
+      },
+      {
+        "id": "lower_threshold",
+        "type": "Constant",
+        "params": {
+          "value": 37
+        }
+      }
+    ],
+    "signals": [
+      {
+        "id": "is_below_lower",
+        "type": "LessThan",
+        "epsilon": 0.5,
+        "inputs": [
+          { "ref": "rsi_indicator" },
+          { "ref": "lower_threshold" }
+        ]
+      },
+      {
+        "id": "is_above_upper",
+        "type": "GreaterThan",
+        "epsilon": 0.5,
+        "inputs": [
+          { "ref": "rsi_indicator" },
+          { "ref": "upper_threshold" }
+        ]
+      },
+      {
+        "id": "buy_signal_cross",
+        "type": "Crossunder",
+        "params": { "mode": "simple" },
+        "inputs": [
+          { "ref": "rsi_indicator" },
+          { "ref": "lower_threshold" }
+        ]
+      },
+      {
+        "id": "sell_signal_cross",
+        "type": "Crossover",
+        "params": { "mode": "simple" },
+        "inputs": [
+          { "ref": "rsi_indicator" },
+          { "ref": "upper_threshold" }
         ]
       }
-    },
-    "capital_strategy": {
-      "name": "PercentCapitalStrategy",
-      "params": {
-        "initial_capital": 100000,
-        "percents": 50,
-        "max_positions": null
-      }
+    ],
+    "outputs": {
+      "buy_signal": "buy_signal_cross",
+      "sell_signal": "sell_signal_cross",
+      "indicators": [
+        { "id": "rsi_indicator", "output_name": "rsi" },
+        { "id": "upper_threshold", "output_name": "upper_bound" },
+        { "id": "lower_threshold", "output_name": "lower_bound" },
+        { "id": "is_below_lower", "output_name": "is_oversold" },
+        { "id": "is_above_upper", "output_name": "is_overbought" },
+        { "id": "buy_signal_cross", "output_name": "buy_signal" },
+        { "id": "sell_signal_cross", "output_name": "sell_signal" }
+      ]
     }
   }
 }
 ```
+
+**说明：** 这个策略不需要`market_indicators`，因为所有指标都基于当前标的的OHLC数据。
 
 ### 策略原理
 
@@ -222,99 +227,88 @@
 
 这个经典策略使用两条不同周期的移动平均线，在短期均线上穿长期均线时买入，下穿时卖出。
 
-### 完整配置
+### 原语策略配置
 
 ```json
 {
-  "name": "双均线交叉策略",
-  "code": "myinvestpilot_dual_ma_primitive",
-  "description": "基于短期均线和长期均线交叉的趋势跟随策略",
-  "strategy_definition": {
-    "trade_strategy": {
-      "indicators": [
-        {
-          "id": "fast_ma",
-          "type": "SMA",
-          "params": {
-            "period": 50,
-            "field": "Close"
-          }
-        },
-        {
-          "id": "slow_ma",
-          "type": "SMA",
-          "params": {
-            "period": 200,
-            "field": "Close"
-          }
-        },
-        {
-          "id": "zero_constant",
-          "type": "Constant",
-          "params": {
-            "value": 0
-          }
+  "trade_strategy": {
+    "indicators": [
+      {
+        "id": "fast_ma",
+        "type": "SMA",
+        "params": {
+          "period": 50,
+          "field": "Close"
         }
-      ],
-      "signals": [
-        {
-          "id": "ma_diff",
-          "type": "Subtract",
-          "inputs": [
-            { "ref": "fast_ma" },
-            { "ref": "slow_ma" }
-          ]
-        },
-        {
-          "id": "bull_trend",
-          "type": "GreaterThan",
-          "epsilon": 0.5,
-          "inputs": [
-            { "ref": "ma_diff" },
-            { "ref": "zero_constant" }
-          ]
-        },
-        {
-          "id": "buy_signal",
-          "type": "Crossover",
-          "params": { "mode": "simple" },
-          "inputs": [
-            { "ref": "fast_ma" },
-            { "ref": "slow_ma" }
-          ]
-        },
-        {
-          "id": "sell_signal",
-          "type": "Crossunder",
-          "params": { "mode": "simple" },
-          "inputs": [
-            { "ref": "fast_ma" },
-            { "ref": "slow_ma" }
-          ]
+      },
+      {
+        "id": "slow_ma",
+        "type": "SMA",
+        "params": {
+          "period": 200,
+          "field": "Close"
         }
-      ],
-      "outputs": {
-        "buy_signal": "buy_signal",
-        "sell_signal": "sell_signal",
-        "indicators": [
-          { "id": "fast_ma", "output_name": "fast_ma" },
-          { "id": "slow_ma", "output_name": "slow_ma" },
-          { "id": "ma_diff", "output_name": "ma_diff" },
-          { "id": "bull_trend", "output_name": "is_bull_trend" }
+      },
+      {
+        "id": "zero_constant",
+        "type": "Constant",
+        "params": {
+          "value": 0
+        }
+      }
+    ],
+    "signals": [
+      {
+        "id": "ma_diff",
+        "type": "Subtract",
+        "inputs": [
+          { "ref": "fast_ma" },
+          { "ref": "slow_ma" }
+        ]
+      },
+      {
+        "id": "bull_trend",
+        "type": "GreaterThan",
+        "epsilon": 0.5,
+        "inputs": [
+          { "ref": "ma_diff" },
+          { "ref": "zero_constant" }
+        ]
+      },
+      {
+        "id": "buy_signal",
+        "type": "Crossover",
+        "params": { "mode": "simple" },
+        "inputs": [
+          { "ref": "fast_ma" },
+          { "ref": "slow_ma" }
+        ]
+      },
+      {
+        "id": "sell_signal",
+        "type": "Crossunder",
+        "params": { "mode": "simple" },
+        "inputs": [
+          { "ref": "fast_ma" },
+          { "ref": "slow_ma" }
         ]
       }
-    },
-    "capital_strategy": {
-      "name": "PercentCapitalStrategy",
-      "params": {
-        "initial_capital": 100000,
-        "percents": 100,
-        "max_positions": null
-      }
+    ],
+    "outputs": {
+      "buy_signal": "buy_signal",
+      "sell_signal": "sell_signal",
+      "indicators": [
+        { "id": "fast_ma", "output_name": "fast_ma" },
+        { "id": "slow_ma", "output_name": "slow_ma" },
+        { "id": "ma_diff", "output_name": "ma_diff" },
+        { "id": "bull_trend", "output_name": "is_bull_trend" }
+      ]
     }
   }
 }
 ```
+
+**说明：** 这个策略同样不需要`market_indicators`，因为所有指标都基于当前标的的OHLC数据。
 
 ### 策略原理
 
@@ -397,127 +391,106 @@
 
 这是一个基于 `StockBondSwitch` 原语的资产轮动策略，根据市场趋势在股票ETF和债券ETF之间进行全仓切换。该策略使用沪深300指数相对于其200日移动平均线的位置作为趋势判断指标。
 
-### 完整配置
+### 原语策略配置
 
 ```json
 {
-  "name": "沪深300股债轮动策略",
-  "code": "stock_bond_switch_primitive",
-  "description": "基于沪深300趋势的股债轮动策略",
-  "symbols": [
-    {"symbol": "510300", "name": "沪深300ETF"},
-    {"symbol": "511260", "name": "10年期国债ETF"}
-  ],
-  "start_date": "2018-01-01",
-  "end_date": "2025-01-01",
-  "currency": "CNY",
-  "market": "CN",
-  "commission": 0.0003,
-  "update_time": "01:00",
-  "strategy_definition": {
-    "market_indicators": {
-      "indicators": [
-        {
-          "code": "000300.SH"
-        }
-      ],
-      "transformers": [
-        {
-          "name": "hs300_raw",
-          "type": "IdentityTransformer",
-          "params": {
-            "indicator": "000300.SH",
-            "field": "Close"
-          }
-        },
-        {
-          "name": "hs300_ma200",
-          "type": "MovingAverageTransformer",
-          "params": {
-            "indicator": "000300.SH",
-            "window": 200,
-            "method": "simple",
-            "field": "Close"
-          }
-        }
-      ]
-    },
-    "trade_strategy": {
-      "indicators": [
-        {
-          "id": "constant_one",
-          "type": "Constant",
-          "params": {
-            "value": 1
-          }
-        }
-      ],
-      "signals": [
-        {
-          "id": "market_trend_up",
-          "type": "GreaterThan",
-          "inputs": [
-            {
-              "market": "000300.SH",
-              "transformer": "hs300_raw"
-            },
-            {
-              "market": "000300.SH",
-              "transformer": "hs300_ma200"
-            }
-          ]
-        },
-        {
-          "id": "stock_bond_buy",
-          "type": "StockBondSwitch",
-          "params": {
-            "default_to_stock": true
-          },
-          "inputs": [
-            {
-              "ref": "market_trend_up"
-            }
-          ]
-        },
-        {
-          "id": "stock_bond_sell",
-          "type": "Not",
-          "inputs": [
-            {
-              "ref": "stock_bond_buy"
-            }
-          ]
-        },
-        {
-          "id": "constant_false_signal",
-          "type": "Comparison",
-          "params": {
-            "comparison": "greater",
-            "threshold": 2
-          },
-          "inputs": [
-            {
-              "ref": "constant_one"
-            }
-          ]
-        }
-      ],
-      "outputs": {
-        "buy_signal": "stock_bond_buy",
-        "sell_signal": "stock_bond_sell"
+  "market_indicators": {
+    "indicators": [
+      {
+        "code": "000300.SH"
       }
-    },
-    "capital_strategy": {
-      "name": "PercentCapitalStrategy",
-      "params": {
-        "initial_capital": 100000,
-        "percents": 99,
-        "max_positions": null
+    ],
+    "transformers": [
+      {
+        "name": "hs300_raw",
+        "type": "IdentityTransformer",
+        "params": {
+          "indicator": "000300.SH",
+          "field": "Close"
+        }
+      },
+      {
+        "name": "hs300_ma200",
+        "type": "MovingAverageTransformer",
+        "params": {
+          "indicator": "000300.SH",
+          "window": 200,
+          "method": "simple",
+          "field": "Close"
+        }
       }
+    ]
+  },
+  "trade_strategy": {
+    "indicators": [
+      {
+        "id": "constant_one",
+        "type": "Constant",
+        "params": {
+          "value": 1
+        }
+      }
+    ],
+    "signals": [
+      {
+        "id": "market_trend_up",
+        "type": "GreaterThan",
+        "inputs": [
+          {
+            "market": "000300.SH",
+            "transformer": "hs300_raw"
+          },
+          {
+            "market": "000300.SH",
+            "transformer": "hs300_ma200"
+          }
+        ]
+      },
+      {
+        "id": "stock_bond_buy",
+        "type": "StockBondSwitch",
+        "params": {
+          "default_to_stock": true
+        },
+        "inputs": [
+          {
+            "ref": "market_trend_up"
+          }
+        ]
+      },
+      {
+        "id": "stock_bond_sell",
+        "type": "Not",
+        "inputs": [
+          {
+            "ref": "stock_bond_buy"
+          }
+        ]
+      },
+      {
+        "id": "constant_false_signal",
+        "type": "Comparison",
+        "params": {
+          "comparison": "greater",
+          "threshold": 2
+        },
+        "inputs": [
+          {
+            "ref": "constant_one"
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "buy_signal": "stock_bond_buy",
+      "sell_signal": "stock_bond_sell"
     }
   }
 }
 ```
+
+**重要说明：** 这个策略**必须**包含`market_indicators`配置，因为`trade_strategy`中使用了市场指标引用（`{"market": "000300.SH", "transformer": "hs300_raw"}`）。如果缺少这部分配置，回测会失败。
 
 ### 策略原理
 
@@ -797,126 +770,115 @@
 
 该策略基于价格突破布林带上轨和下轨生成交易信号，结合RSI过滤器减少假突破。
 
-### 完整配置
+### 原语策略配置
 
 ```json
 {
-  "name": "布林带突破策略",
-  "code": "myinvestpilot_bbands_breakout",
-  "description": "基于布林带突破的交易策略，使用RSI过滤假突破",
-  "strategy_definition": {
-    "trade_strategy": {
-      "indicators": [
-        {
-          "id": "bbands",
-          "type": "BollingerBands",
-          "params": {
-            "period": 20,
-            "stddev": 2.0,
-            "field": "Close"
-          }
-        },
-        {
-          "id": "rsi_indicator",
-          "type": "RSI",
-          "params": {
-            "period": 14,
-            "field": "Close"
-          }
-        },
-        {
-          "id": "rsi_low",
-          "type": "Constant",
-          "params": {
-            "value": 40
-          }
-        },
-        {
-          "id": "rsi_high",
-          "type": "Constant",
-          "params": {
-            "value": 60
-          }
+  "trade_strategy": {
+    "indicators": [
+      {
+        "id": "bbands",
+        "type": "BollingerBands",
+        "params": {
+          "period": 20,
+          "stddev": 2.0,
+          "field": "Close"
         }
-      ],
-      "signals": [
-        {
-          "id": "price_above_upper",
-          "type": "Crossover",
-          "params": { "mode": "simple" },
-          "inputs": [
-            { "column": "Close" },
-            { "ref": "bbands", "band": "upper" }
-          ]
-        },
-        {
-          "id": "price_below_lower",
-          "type": "Crossunder",
-          "params": { "mode": "simple" },
-          "inputs": [
-            { "column": "Close" },
-            { "ref": "bbands", "band": "lower" }
-          ]
-        },
-        {
-          "id": "rsi_bullish",
-          "type": "GreaterThan",
-          "epsilon": 0.5,
-          "inputs": [
-            { "ref": "rsi_indicator" },
-            { "ref": "rsi_high" }
-          ]
-        },
-        {
-          "id": "rsi_bearish",
-          "type": "LessThan",
-          "epsilon": 0.5,
-          "inputs": [
-            { "ref": "rsi_indicator" },
-            { "ref": "rsi_low" }
-          ]
-        },
-        {
-          "id": "buy_signal",
-          "type": "And",
-          "inputs": [
-            { "ref": "price_below_lower" },
-            { "ref": "rsi_bearish" }
-          ]
-        },
-        {
-          "id": "sell_signal",
-          "type": "And",
-          "inputs": [
-            { "ref": "price_above_upper" },
-            { "ref": "rsi_bullish" }
-          ]
+      },
+      {
+        "id": "rsi_indicator",
+        "type": "RSI",
+        "params": {
+          "period": 14,
+          "field": "Close"
         }
-      ],
-      "outputs": {
-        "buy_signal": "buy_signal",
-        "sell_signal": "sell_signal",
-        "indicators": [
-          { "id": "bbands", "output_name": "bbands" },
-          { "id": "rsi_indicator", "output_name": "rsi" },
-          { "id": "rsi_bearish", "output_name": "rsi_bearish" },
-          { "id": "rsi_bullish", "output_name": "rsi_bullish" },
-          { "id": "price_below_lower", "output_name": "price_below_lower" },
-          { "id": "price_above_upper", "output_name": "price_above_upper" }
+      },
+      {
+        "id": "rsi_low",
+        "type": "Constant",
+        "params": {
+          "value": 40
+        }
+      },
+      {
+        "id": "rsi_high",
+        "type": "Constant",
+        "params": {
+          "value": 60
+        }
+      }
+    ],
+    "signals": [
+      {
+        "id": "price_above_upper",
+        "type": "Crossover",
+        "params": { "mode": "simple" },
+        "inputs": [
+          { "column": "Close" },
+          { "ref": "bbands", "band": "upper" }
+        ]
+      },
+      {
+        "id": "price_below_lower",
+        "type": "Crossunder",
+        "params": { "mode": "simple" },
+        "inputs": [
+          { "column": "Close" },
+          { "ref": "bbands", "band": "lower" }
+        ]
+      },
+      {
+        "id": "rsi_bullish",
+        "type": "GreaterThan",
+        "epsilon": 0.5,
+        "inputs": [
+          { "ref": "rsi_indicator" },
+          { "ref": "rsi_high" }
+        ]
+      },
+      {
+        "id": "rsi_bearish",
+        "type": "LessThan",
+        "epsilon": 0.5,
+        "inputs": [
+          { "ref": "rsi_indicator" },
+          { "ref": "rsi_low" }
+        ]
+      },
+      {
+        "id": "buy_signal",
+        "type": "And",
+        "inputs": [
+          { "ref": "price_below_lower" },
+          { "ref": "rsi_bearish" }
+        ]
+      },
+      {
+        "id": "sell_signal",
+        "type": "And",
+        "inputs": [
+          { "ref": "price_above_upper" },
+          { "ref": "rsi_bullish" }
         ]
       }
-    },
-    "capital_strategy": {
-      "name": "PercentCapitalStrategy",
-      "params": {
-        "initial_capital": 100000,
-        "percents": 100,
-        "max_positions": null
-      }
+    ],
+    "outputs": {
+      "buy_signal": "buy_signal",
+      "sell_signal": "sell_signal",
+      "indicators": [
+        { "id": "bbands", "output_name": "bbands" },
+        { "id": "rsi_indicator", "output_name": "rsi" },
+        { "id": "rsi_bearish", "output_name": "rsi_bearish" },
+        { "id": "rsi_bullish", "output_name": "rsi_bullish" },
+        { "id": "price_below_lower", "output_name": "price_below_lower" },
+        { "id": "price_above_upper", "output_name": "price_above_upper" }
+      ]
     }
   }
 }
 ```
+
+**说明：** 这个策略不需要`market_indicators`，因为所有指标都基于当前标的的OHLC数据。
 
 ### 策略原理
 
