@@ -6,6 +6,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the documentation website for 策引 (Plutus), an AI-powered investment assistant platform. Built with Docusaurus 3.0, it provides comprehensive documentation for users and developers of the investment platform.
 
+## 🎯 Documentation Philosophy
+
+**This is a PUBLIC, USER-FACING documentation repository.** All content should be:
+
+- **User-friendly**: Written for product users, not developers
+- **Accessible**: No code implementation details or technical internals
+- **Practical**: Focus on how to use features, not how they work internally
+- **Clear**: Use plain language and avoid technical jargon
+- **Example-driven**: Provide practical configuration examples and use cases
+
+**What to AVOID in this documentation:**
+- Internal code snippets or implementation details
+- Developer-specific technical explanations
+- Backend system architecture details
+- API implementation specifics
+- Debugging code or system internals
+
+**What to INCLUDE:**
+- User configuration examples (JSON configurations)
+- Step-by-step usage guides
+- Feature explanations from user perspective
+- Troubleshooting from user experience angle
+- Best practices for strategy creation
+
 ## Architecture
 
 ### Technology Stack
