@@ -920,3 +920,263 @@
 3. **定期回测和调整**：市场变化可能需要参数调整
 4. **记录决策逻辑**：记录每次参数调整的原因和结果
 5. **构建策略组合**：不同策略组合可能比单一策略表现更好
+
+
+## 🆕 高级数学运算策略
+### 策略概述
+这是一个展示新数学运算功能的高级策略，利用纯数学模式计算复合指标和信号强度，结合内联常量实现灵活的参数调节。
+### 完整配置
+```json
+{
+  "name": "多因子动量策略（数学运算增强）",
+  "code": "multi_factor_momentum_math",
+  "description": "使用纯数学运算计算信号强度的多因子策略",
+  "strategy_definition": {
+    "trade_strategy": {
+      "indicators": [
+        {
+          "id": "macd_indicator",
+          "type": "MACD",
+          "params": {
+            "column": "Close",
+            "fast_period": 12,
+            "slow_period": 26,
+            "signal_period": 9
+          }
+        },
+        {
+          "id": "volume_ma",
+          "type": "SMA",
+          "params": {
+            "column": "Volume",
+            "period": 20
+          }
+        },
+        {
+          "id": "price_ma_short",
+          "type": "SMA",
+          "params": {
+            "column": "Close",
+            "period": 10
+          }
+        },
+        {
+          "id": "price_ma_long",
+          "type": "SMA",
+          "params": {
+            "column": "Close",
+            "period": 20
+          }
+        },
+        {
+          "id": "atr_indicator",
+          "type": "ATR",
+          "params": {
+            "period": 14
+          }
+        }
+      ],
+      "signals": [
+        {
+          "id": "volume_ratio",
+          "type": "Divide",
+          "params": {
+            "return_calculation": true
+          },
+          "inputs": [
+            {"column": "Volume"},
+            {"ref": "volume_ma"}
+          ]
+        },
+        {
+          "id": "macd_difference",
+          "type": "Subtract", 
+          "params": {
+            "return_calculation": true
+          },
+          "inputs": [
+            {"ref": "macd_indicator.macd"},
+            {"ref": "macd_indicator.signal"}
+          ]
+        },
+        {
+          "id": "macd_atr_ratio",
+          "type": "Divide",
+          "params": {
+            "return_calculation": true
+          },
+          "inputs": [
+            {"ref": "macd_difference"},
+            {"ref": "atr_indicator"}
+          ]
+        },
+        {
+          "id": "ma_difference",
+          "type": "Subtract",
+          "params": {
+            "return_calculation": true
+          },
+          "inputs": [
+            {"ref": "price_ma_short"},
+            {"ref": "price_ma_long"}
+          ]
+        },
+        {
+          "id": "ma_close_ratio",
+          "type": "Divide",
+          "params": {
+            "return_calculation": true
+          },
+          "inputs": [
+            {"ref": "ma_difference"},
+            {"column": "Close"}
+          ]
+        },
+        {
+          "id": "signal_strength",
+          "type": "Multiply",
+          "params": {
+            "return_calculation": true
+          },
+          "inputs": [
+            {"ref": "macd_atr_ratio"},
+            {"ref": "ma_close_ratio"},
+            {"type": "Constant", "value": 100.0}
+          ]
+        },
+        {
+          "id": "volume_filter",
+          "type": "LessThan",
+          "inputs": [
+            {"ref": "volume_ratio"},
+            {"type": "Constant", "value": 3.0}
+          ]
+        },
+        {
+          "id": "signal_threshold",
+          "type": "GreaterThan",
+          "inputs": [
+            {"ref": "signal_strength"},
+            {"type": "Constant", "value": 0.5}
+          ]
+        },
+        {
+          "id": "buy_signal",
+          "type": "And",
+          "inputs": [
+            {"ref": "signal_threshold"},
+            {"ref": "volume_filter"},
+            {
+              "type": "GreaterThan",
+              "inputs": [
+                {"ref": "volume_ratio"},
+                {"type": "Constant", "value": 1.2}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sell_signal",
+          "type": "Or",
+          "inputs": [
+            {
+              "type": "LessThan",
+              "inputs": [
+                {"ref": "signal_strength"},
+                {"type": "Constant", "value": -0.3}
+              ]
+            },
+            {
+              "type": "GreaterThan",
+              "inputs": [
+                {"ref": "volume_ratio"},
+                {"type": "Constant", "value": 3.0}
+              ]
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "buy_signal": "buy_signal",
+        "sell_signal": "sell_signal",
+        "indicators": [
+          {"id": "signal_strength", "output_name": "signal_score"},
+          {"id": "volume_ratio", "output_name": "volume_factor"},
+          {"id": "macd_atr_ratio", "output_name": "macd_momentum"},
+          {"id": "ma_close_ratio", "output_name": "ma_trend"}
+        ]
+      }
+    },
+    "capital_strategy": {
+      "name": "PercentCapitalStrategy",
+      "params": {
+        "initial_capital": 100000,
+        "percents": 60,
+        "max_positions": null
+      }
+    }
+  }
+}
+```
+### 新功能特性说明
+#### 1. 纯数学运算模式
+使用 `return_calculation: true` 执行纯数学计算：
+- **volume_ratio**: 计算成交量相对于平均值的倍数
+- **macd_difference**: MACD线与信号线的差值
+- **signal_strength**: 多因子复合信号强度评分
+#### 2. 多操作数支持
+`signal_strength` 信号展示了多操作数乘法：
+```json
+{
+  "type": "Multiply",
+  "params": {"return_calculation": true},
+  "inputs": [
+    {"ref": "macd_atr_ratio"},
+    {"ref": "ma_close_ratio"}, 
+    {"type": "Constant", "value": 100.0}
+  ]
+}
+```
+#### 3. 内联常量
+无需预定义常量指标，直接使用内联格式：
+```json
+{"type": "Constant", "value": 1.2}
+{"type": "Constant", "value": 3.0}
+```
+#### 4. 嵌套信号
+在逻辑运算符中使用嵌套信号定义：
+```json
+{
+  "type": "And",
+  "inputs": [
+    {"ref": "signal_threshold"},
+    {
+      "type": "GreaterThan",
+      "inputs": [
+        {"ref": "volume_ratio"},
+        {"type": "Constant", "value": 1.2}
+      ]
+    }
+  ]
+}
+```
+### 策略优势
+1. **灵活的数值计算**：直接获得计算结果，可用于复合指标构建
+2. **简化配置**：减少中间指标定义，提高配置可读性
+3. **动态阈值**：支持内联常量，便于快速调参
+4. **复合评分**：多因子组合形成综合信号强度
+### 参数调优建议
+| 参数 | 位置 | 调优范围 | 说明 |
+|------|------|----------|------|
+| 信号强度阈值 | signal_threshold | 0.3-1.0 | 控制买入信号敏感度 |
+| 成交量上限 | volume_filter | 2.0-5.0 | 过滤异常成交量 |
+| 成交量下限 | buy_signal | 1.1-1.5 | 确保足够成交量支撑 |
+| 强度缩放因子 | signal_strength | 50-200 | 调整复合评分的数值范围 |
+## 实际应用建议
+
+1. **从简单开始**：先使用基础策略，逐步添加复杂性
+2. **保持策略可解释性**：了解每个组件的作用和意义
+3. **定期回测和调整**：市场变化可能需要参数调整
+4. **记录决策逻辑**：记录每次参数调整的原因和结果
+5. **构建策略组合**：不同策略组合可能比单一策略表现更好
+6. **🆕 善用新功能**：合理使用纯数学模式和内联常量提高策略灵活性

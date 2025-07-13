@@ -57,6 +57,7 @@ const sidebars: SidebarsConfig = {
         'primitives/composition',
         'primitives/examples',
         'primitives/troubleshooting',
+        'primitives/strategy-design-best-practices',
         {
           type: 'category',
           label: '高级主题',

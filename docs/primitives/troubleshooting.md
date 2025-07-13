@@ -52,12 +52,64 @@ ValueError: Missing required parameter 'comparison' for Comparison signal
 **示例错误**：
 ```
 ValueError: Crossover requires exactly 2 inputs, got 1
+ValueError: At least 3 inputs required when threshold is not provided
 ```
 
 **解决方案**：
 
 - 检查每个信号原语所需的输入数量
 - 确保每个输入都有有效的引用或列名
+- 对于数学运算组件，如需纯数学计算可使用 `return_calculation=true`
+- 对于嵌套信号，确保内联常量格式正确：`{"type": "Constant", "value": N}`
+### 5. 数学运算模式配置错误
+**症状**：数学运算组件返回意外的结果类型或计算错误。
+**常见问题和解决方案**：
+1. **想要纯数学计算但得到布尔结果**：
+   ```json
+   // 错误 - 默认为比较模式
+   {
+     "type": "Multiply",
+     "inputs": [{"ref": "indicator1"}, {"ref": "indicator2"}]
+   }
+   
+   // 正确 - 使用纯数学模式
+   {
+     "type": "Multiply", 
+     "params": {"return_calculation": true},
+     "inputs": [{"ref": "indicator1"}, {"ref": "indicator2"}]
+   }
+   ```
+2. **多操作数计算失败**：
+   ```json
+   // 错误 - 比较模式不支持多操作数
+   {
+     "type": "Multiply",
+     "inputs": [{"ref": "a"}, {"ref": "b"}, {"ref": "c"}]
+   }
+   
+   // 正确 - 纯数学模式支持多操作数
+   {
+     "type": "Multiply",
+     "params": {"return_calculation": true}, 
+     "inputs": [{"ref": "a"}, {"ref": "b"}, {"ref": "c"}]
+   }
+   ```
+3. **内联常量格式错误**：
+   ```json
+   // 错误 - 不支持的格式
+   {
+     "type": "Add",
+     "inputs": [{"ref": "indicator"}, {"value": 10}]
+   }
+   
+   // 正确 - 使用标准内联常量格式
+   {
+     "type": "Add", 
+     "params": {"return_calculation": true},
+     "inputs": [{"ref": "indicator"}, {"type": "Constant", "value": 10}]
+   }
+   ```
+
 
 ## 数据和信号问题
 
