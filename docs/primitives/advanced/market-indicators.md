@@ -18,37 +18,349 @@
 
 ```json
 {
-  "name": "使用市场指标的策略",
-  "code": "market_aware_strategy",
-  "description": "参考VIX指标的市场感知策略",
-  "strategy_definition": {
-    "market_indicators": {
+  "market_indicators": {
+    "indicators": [
+      {
+        "code": "SPX"
+      }
+    ],
+    "transformers": [
+      {
+        "name": "spx_raw",
+        "type": "IdentityTransformer",
+        "params": {
+          "indicator": "SPX",
+          "field": "Close"
+        }
+      },
+      {
+        "name": "spx_ma50",
+        "type": "MovingAverageTransformer",
+        "params": {
+          "indicator": "SPX",
+          "window": 50,
+          "method": "simple",
+          "field": "Close"
+        }
+      },
+      {
+        "name": "spx_ma200",
+        "type": "MovingAverageTransformer",
+        "params": {
+          "indicator": "SPX",
+          "window": 200,
+          "method": "simple",
+          "field": "Close"
+        }
+      },
+      {
+        "name": "spx_rs",
+        "type": "RelativeStrengthTransformer",
+        "params": {
+          "indicator": "SPX",
+          "reference": "ma",
+          "window": 90,
+          "field": "Close"
+        }
+      }
+    ]
+  },
+  "trade_strategy": {
+    "indicators": [
+      {
+        "id": "ma_short",
+        "type": "SMA",
+        "params": {
+          "period": 20,
+          "column": "Close"
+        }
+      },
+      {
+        "id": "ma_long",
+        "type": "SMA",
+        "params": {
+          "period": 50,
+          "column": "Close"
+        }
+      },
+      {
+        "id": "rsi_indicator",
+        "type": "RSI",
+        "params": {
+          "period": 14
+        }
+      }
+    ],
+    "signals": [
+      {
+        "id": "price_gt_ma_short",
+        "type": "GreaterThan",
+        "inputs": [
+          {
+            "column": "Close"
+          },
+          {
+            "ref": "ma_short"
+          }
+        ]
+      },
+      {
+        "id": "ma_short_gt_ma_long",
+        "type": "GreaterThan",
+        "inputs": [
+          {
+            "ref": "ma_short"
+          },
+          {
+            "ref": "ma_long"
+          }
+        ]
+      },
+      {
+        "id": "rsi_not_overbought",
+        "type": "LessThan",
+        "epsilon": 0.5,
+        "inputs": [
+          {
+            "type": "Constant",
+            "value": 70
+          },
+          {
+            "ref": "rsi_indicator"
+          }
+        ]
+      },
+      {
+        "id": "rsi_not_overbought_direct",
+        "type": "LessThan",
+        "inputs": [
+          {
+            "type": "Constant",
+            "value": 65
+          },
+          {
+            "ref": "rsi_indicator"
+          }
+        ]
+      },
+      {
+        "id": "rsi_not_oversold",
+        "type": "GreaterThan",
+        "inputs": [
+          {
+            "ref": "rsi_indicator"
+          },
+          {
+            "type": "Constant",
+            "value": 30
+          }
+        ]
+      },
+      {
+        "id": "market_uptrend",
+        "type": "GreaterThan",
+        "inputs": [
+          {
+            "market": "SPX",
+            "transformer": "spx_ma50"
+          },
+          {
+            "market": "SPX",
+            "transformer": "spx_ma200"
+          }
+        ]
+      },
+      {
+        "id": "market_strength_rising",
+        "type": "GreaterThan",
+        "inputs": [
+          {
+            "market": "SPX",
+            "transformer": "spx_rs"
+          },
+          {
+            "type": "Constant",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "market_environment_bullish",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "market_uptrend"
+          },
+          {
+            "ref": "market_strength_rising"
+          }
+        ]
+      },
+      {
+        "id": "market_price_reference",
+        "type": "GreaterThan",
+        "inputs": [
+          {
+            "market": "SPX",
+            "transformer": "spx_raw"
+          },
+          {
+            "type": "Constant",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "price_and_ma_bullish",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "price_gt_ma_short"
+          },
+          {
+            "ref": "ma_short_gt_ma_long"
+          }
+        ]
+      },
+      {
+        "id": "stock_technical_bullish",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "price_and_ma_bullish"
+          },
+          {
+            "ref": "rsi_not_overbought"
+          }
+        ]
+      },
+      {
+        "id": "buy_signal_condition",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "stock_technical_bullish"
+          },
+          {
+            "ref": "market_environment_bullish"
+          }
+        ]
+      },
+      {
+        "id": "sell_signal_condition",
+        "type": "Or",
+        "inputs": [
+          {
+            "type": "Not",
+            "inputs": [
+              {
+                "ref": "market_uptrend"
+              }
+            ]
+          },
+          {
+            "type": "Not",
+            "inputs": [
+              {
+                "ref": "price_gt_ma_short"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "buy_signal": "buy_signal_condition",
+      "sell_signal": "sell_signal_condition",
       "indicators": [
         {
-          "code": "VIX"
-        }
-      ],
-      "transformers": [
-        {
-          "name": "vix_raw",
-          "type": "IdentityTransformer",
-          "params": {
-            "indicator": "VIX",
-            "field": "Close"
-          }
+          "id": "ma_short",
+          "output_name": "ma_short"
         },
         {
-          "name": "vix_percentile",
-          "type": "PercentileRankTransformer",
-          "params": {
-            "indicator": "VIX",
-            "lookback": 252,
-            "field": "Close"
-          }
+          "id": "ma_long",
+          "output_name": "ma_long"
+        },
+        {
+          "id": "rsi_indicator",
+          "output_name": "rsi"
+        },
+        {
+          "id": "price_gt_ma_short",
+          "output_name": "price_gt_ma"
+        },
+        {
+          "id": "ma_short_gt_ma_long",
+          "output_name": "ma_crossover"
+        },
+        {
+          "id": "rsi_not_overbought",
+          "output_name": "rsi_ok"
+        },
+        {
+          "id": "rsi_not_overbought_direct",
+          "output_name": "rsi_direct"
+        },
+        {
+          "id": "rsi_not_oversold",
+          "output_name": "rsi_gt_30"
+        },
+        {
+          "id": "price_ma_bull",
+          "output_name": "price_ma_bull"
+        },
+        {
+          "id": "market_uptrend",
+          "output_name": "mkt_uptrend"
+        },
+        {
+          "id": "market_strength_rising",
+          "output_name": "mkt_strength"
+        },
+        {
+          "id": "market_environment_bullish",
+          "output_name": "mkt_bullish"
+        },
+        {
+          "id": "market_price_reference",
+          "output_name": "spx_ref"
+        },
+        {
+          "id": "stock_technical_bullish",
+          "output_name": "stock_bullish"
+        },
+        {
+          "id": "buy_signal_condition",
+          "output_name": "buy_condition"
+        },
+        {
+          "id": "sell_signal_condition",
+          "output_name": "sell_condition"
+        }
+      ],
+      "market_indicators": [
+        {
+          "market": "SPX",
+          "transformer": "spx_raw",
+          "output_name": "spx"
+        },
+        {
+          "market": "SPX",
+          "transformer": "spx_ma50",
+          "output_name": "spx_ma50"
+        },
+        {
+          "market": "SPX",
+          "transformer": "spx_ma200",
+          "output_name": "spx_ma200"
+        },
+        {
+          "market": "SPX",
+          "transformer": "spx_rs",
+          "output_name": "spx_rs"
         }
       ]
-    },
-    // 其余策略配置...
+    }
   }
 }
 ```
@@ -258,98 +570,296 @@
 
 ### 示例1：VIX过滤策略
 
-此策略仅在VIX指标显示市场波动性相对较低（低于75百分位）或处于下降趋势（低于短期均线）时进行交易。
+使用VIX波动率指标过滤市场环境，结合250日均线和吊灯止损的趋势跟踪策略。买入条件：价格高于均线和吊灯止损，且VIX百分位低于75或VIX下降；卖出条件：价格低于均线和吊灯止损，且市场环境恶化。(美股用VIX，其他市场需调整)
 
 ```json
 {
-  "strategy_definition": {
-    "market_indicators": {
-      "indicators": [{"code": "VIX"}],
-      "transformers": [
-        {
-          "name": "vix_raw",
-          "type": "IdentityTransformer",
-          "params": {
-            "indicator": "VIX",
-            "field": "Close"
+  "market_indicators": {
+    "indicators": [
+      {
+        "code": "VIX"
+      }
+    ],
+    "transformers": [
+      {
+        "name": "vix_raw",
+        "type": "IdentityTransformer",
+        "params": {
+          "indicator": "VIX",
+          "field": "Close"
+        }
+      },
+      {
+        "name": "vix_percentile",
+        "type": "PercentileRankTransformer",
+        "params": {
+          "indicator": "VIX",
+          "lookback": 252,
+          "field": "Close"
+        }
+      },
+      {
+        "name": "vix_ma",
+        "type": "MovingAverageTransformer",
+        "params": {
+          "indicator": "VIX",
+          "window": 20,
+          "method": "simple",
+          "field": "Close"
+        }
+      }
+    ]
+  },
+  "trade_strategy": {
+    "indicators": [
+      {
+        "id": "ma_indicator",
+        "type": "SMA",
+        "params": {
+          "period": 250,
+          "column": "Close"
+        }
+      },
+      {
+        "id": "atr_indicator",
+        "type": "ATR",
+        "params": {
+          "period": 60
+        }
+      },
+      {
+        "id": "chandelier_exit_indicator",
+        "type": "ChandelierExit",
+        "params": {
+          "period": 60,
+          "multiplier": 4
+        }
+      },
+      {
+        "id": "constant_75",
+        "type": "Constant",
+        "params": {
+          "value": 75
+        }
+      }
+    ],
+    "signals": [
+      {
+        "id": "price_gt_ma",
+        "type": "GreaterThan",
+        "inputs": [
+          {
+            "column": "Close"
+          },
+          {
+            "ref": "ma_indicator"
           }
-        },
-        {
-          "name": "vix_percentile",
-          "type": "PercentileRankTransformer",
-          "params": {"indicator": "VIX", "lookback": 252, "field": "Close"}
-        },
-        {
-          "name": "vix_ma",
-          "type": "MovingAverageTransformer",
-          "params": {"indicator": "VIX", "window": 20, "method": "simple", "field": "Close"}
-        }
-      ]
-    },
-    "trade_strategy": {
-      "indicators": [
-        {
-          "id": "constant_75",
-          "type": "Constant",
-          "params": {
-            "value": 75
+        ]
+      },
+      {
+        "id": "price_gt_ce",
+        "type": "GreaterThan",
+        "inputs": [
+          {
+            "column": "Close"
+          },
+          {
+            "ref": "chandelier_exit_indicator"
           }
-        }
-      ],
-      "signals": [
-        {
-          "id": "market_volatility_low",
-          "type": "LessThan",
-          "epsilon": 0.5,
-          "inputs": [
-            { "market": "VIX", "transformer": "vix_percentile" },
-            { "ref": "constant_75" }
-          ]
-        },
-        {
-          "id": "market_volatility_declining",
-          "type": "LessThan",
-          "inputs": [
-            { "market": "VIX", "transformer": "vix_raw" },
-            { "market": "VIX", "transformer": "vix_ma" }
-          ]
-        },
-        {
-          "id": "market_condition_good",
-          "type": "Or",
-          "inputs": [
-            { "ref": "market_volatility_low" },
-            { "ref": "market_volatility_declining" }
-          ]
-        },
-        {
-          "id": "buy_signal_condition",
-          "type": "And",
-          "inputs": [
-            { "ref": "price_gt_ma" },
-            { "ref": "market_condition_good" }
-          ]
-        }
-      ],
-      "outputs": {
-        "market_indicators": [
+        ]
+      },
+      {
+        "id": "market_volatility_low",
+        "type": "LessThan",
+        "epsilon": 0.5,
+        "inputs": [
           {
             "market": "VIX",
-            "transformer": "vix_raw",
-            "output_name": "vix_raw"
+            "transformer": "vix_percentile"
+          },
+          {
+            "ref": "constant_75"
+          }
+        ]
+      },
+      {
+        "id": "market_volatility_declining",
+        "type": "LessThan",
+        "inputs": [
+          {
+            "market": "VIX",
+            "transformer": "vix_raw"
           },
           {
             "market": "VIX",
-            "transformer": "vix_percentile",
-            "output_name": "vix_percentile"
+            "transformer": "vix_ma"
+          }
+        ]
+      },
+      {
+        "id": "price_lt_ma",
+        "type": "LessThan",
+        "inputs": [
+          {
+            "ref": "ma_indicator"
           },
           {
-            "market": "VIX",
-            "transformer": "vix_ma",
-            "output_name": "vix_ma"
+            "column": "Close"
+          }
+        ]
+      },
+      {
+        "id": "price_lt_ce",
+        "type": "LessThan",
+        "inputs": [
+          {
+            "ref": "chandelier_exit_indicator"
+          },
+          {
+            "column": "Close"
+          }
+        ]
+      },
+      {
+        "id": "market_condition_good",
+        "type": "Or",
+        "inputs": [
+          {
+            "ref": "market_volatility_low"
+          },
+          {
+            "ref": "market_volatility_declining"
+          }
+        ]
+      },
+      {
+        "id": "price_conditions",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "price_gt_ma"
+          },
+          {
+            "ref": "price_gt_ce"
+          }
+        ]
+      },
+      {
+        "id": "technical_buy_conditions",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "price_conditions"
+          },
+          {
+            "ref": "price_gt_ma"
+          }
+        ]
+      },
+      {
+        "id": "buy_signal_condition",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "technical_buy_conditions"
+          },
+          {
+            "ref": "market_condition_good"
+          }
+        ]
+      },
+      {
+        "id": "price_conditions_sell",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "price_lt_ma"
+          },
+          {
+            "ref": "price_lt_ce"
+          }
+        ]
+      },
+      {
+        "id": "sell_signal_condition",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "price_conditions_sell"
+          },
+          {
+            "type": "Not",
+            "inputs": [
+              {
+                "ref": "market_condition_good"
+              }
+            ]
           }
         ]
       }
+    ],
+    "outputs": {
+      "buy_signal": "buy_signal_condition",
+      "sell_signal": "sell_signal_condition",
+      "indicators": [
+        {
+          "id": "ma_indicator",
+          "output_name": "ma"
+        },
+        {
+          "id": "atr_indicator",
+          "output_name": "atr"
+        },
+        {
+          "id": "chandelier_exit_indicator",
+          "output_name": "chandelier_stop"
+        },
+        {
+          "id": "market_volatility_low",
+          "output_name": "vix_percentile_low"
+        },
+        {
+          "id": "market_volatility_declining",
+          "output_name": "vix_declining"
+        },
+        {
+          "id": "market_condition_good",
+          "output_name": "market_ok"
+        },
+        {
+          "id": "price_conditions",
+          "output_name": "price_conditions"
+        },
+        {
+          "id": "technical_buy_conditions",
+          "output_name": "tech_buy"
+        },
+        {
+          "id": "buy_signal_condition",
+          "output_name": "buy_condition"
+        },
+        {
+          "id": "sell_signal_condition",
+          "output_name": "sell_condition"
+        }
+      ],
+      "market_indicators": [
+        {
+          "market": "VIX",
+          "transformer": "vix_raw",
+          "output_name": "vix_raw"
+        },
+        {
+          "market": "VIX",
+          "transformer": "vix_percentile",
+          "output_name": "vix_percentile"
+        },
+        {
+          "market": "VIX",
+          "transformer": "vix_ma",
+          "output_name": "vix_ma"
+        }
+      ]
     }
   }
 }
@@ -357,111 +867,352 @@
 
 ### 示例2：市场趋势跟踪策略
 
-此策略使用大盘指数（如SPX）的趋势来过滤交易机会，只有在市场处于上升趋势且相对强度良好时才买入。
+基于市场指数相对强度和市场趋势的双重过滤策略，结合了离散对比强度速率和市场平均线趋势。
 
 ```json
 {
-  "strategy_definition": {
-    "market_indicators": {
-      "indicators": [{"code": "SPX"}],
-      "transformers": [
-        {
-          "name": "spx_raw",
-          "type": "IdentityTransformer",
-          "params": {
-            "indicator": "SPX",
-            "field": "Close"
-          }
-        },
-        {
-          "name": "spx_ma50",
-          "type": "MovingAverageTransformer",
-          "params": {"indicator": "SPX", "window": 50, "method": "simple", "field": "Close"}
-        },
-        {
-          "name": "spx_ma200",
-          "type": "MovingAverageTransformer",
-          "params": {"indicator": "SPX", "window": 200, "method": "simple", "field": "Close"}
-        },
-        {
-          "name": "spx_rs",
-          "type": "RelativeStrengthTransformer",
-          "params": {
-            "indicator": "SPX",
-            "window": 90,
-            "field": "Close",
-            "reference": "ma"
-          }
+  "market_indicators": {
+    "indicators": [
+      {
+        "code": "SPX"
+      }
+    ],
+    "transformers": [
+      {
+        "name": "spx_raw",
+        "type": "IdentityTransformer",
+        "params": {
+          "indicator": "SPX",
+          "field": "Close"
         }
-      ]
-    },
-    "trade_strategy": {
-      "signals": [
-        {
-          "id": "market_uptrend",
-          "type": "GreaterThan",
-          "inputs": [
-            { "market": "SPX", "transformer": "spx_ma50" },
-            { "market": "SPX", "transformer": "spx_ma200" }
-          ]
-        },
-        {
-          "id": "market_strength_rising",
-          "type": "GreaterThan",
-          "inputs": [
-            { "market": "SPX", "transformer": "spx_rs" },
-            { "type": "Constant", "value": 1.0 }
-          ]
-        },
-        {
-          "id": "market_environment_bullish",
-          "type": "And",
-          "inputs": [
-            { "ref": "market_uptrend" },
-            { "ref": "market_strength_rising" }
-          ]
-        },
-        {
-          "id": "market_price_reference",
-          "type": "GreaterThan",
-          "inputs": [
-            { "market": "SPX", "transformer": "spx_raw" },
-            { "type": "Constant", "value": 0 }
-          ]
-        },
-        {
-          "id": "buy_signal_condition",
-          "type": "And",
-          "inputs": [
-            { "ref": "stock_technical_bullish" },
-            { "ref": "market_environment_bullish" }
-          ]
+      },
+      {
+        "name": "spx_ma50",
+        "type": "MovingAverageTransformer",
+        "params": {
+          "indicator": "SPX",
+          "window": 50,
+          "method": "simple",
+          "field": "Close"
         }
-      ],
-      "outputs": {
-        "market_indicators": [
+      },
+      {
+        "name": "spx_ma200",
+        "type": "MovingAverageTransformer",
+        "params": {
+          "indicator": "SPX",
+          "window": 200,
+          "method": "simple",
+          "field": "Close"
+        }
+      },
+      {
+        "name": "spx_rs",
+        "type": "RelativeStrengthTransformer",
+        "params": {
+          "indicator": "SPX",
+          "reference": "ma",
+          "window": 90,
+          "field": "Close"
+        }
+      }
+    ]
+  },
+  "trade_strategy": {
+    "indicators": [
+      {
+        "id": "ma_short",
+        "type": "SMA",
+        "params": {
+          "period": 20,
+          "column": "Close"
+        }
+      },
+      {
+        "id": "ma_long",
+        "type": "SMA",
+        "params": {
+          "period": 50,
+          "column": "Close"
+        }
+      },
+      {
+        "id": "rsi_indicator",
+        "type": "RSI",
+        "params": {
+          "period": 14
+        }
+      }
+    ],
+    "signals": [
+      {
+        "id": "price_gt_ma_short",
+        "type": "GreaterThan",
+        "inputs": [
+          {
+            "column": "Close"
+          },
+          {
+            "ref": "ma_short"
+          }
+        ]
+      },
+      {
+        "id": "ma_short_gt_ma_long",
+        "type": "GreaterThan",
+        "inputs": [
+          {
+            "ref": "ma_short"
+          },
+          {
+            "ref": "ma_long"
+          }
+        ]
+      },
+      {
+        "id": "rsi_not_overbought",
+        "type": "LessThan",
+        "epsilon": 0.5,
+        "inputs": [
+          {
+            "type": "Constant",
+            "value": 70
+          },
+          {
+            "ref": "rsi_indicator"
+          }
+        ]
+      },
+      {
+        "id": "rsi_not_overbought_direct",
+        "type": "LessThan",
+        "inputs": [
+          {
+            "type": "Constant",
+            "value": 65
+          },
+          {
+            "ref": "rsi_indicator"
+          }
+        ]
+      },
+      {
+        "id": "rsi_not_oversold",
+        "type": "GreaterThan",
+        "inputs": [
+          {
+            "ref": "rsi_indicator"
+          },
+          {
+            "type": "Constant",
+            "value": 30
+          }
+        ]
+      },
+      {
+        "id": "market_uptrend",
+        "type": "GreaterThan",
+        "inputs": [
           {
             "market": "SPX",
-            "transformer": "spx_raw",
-            "output_name": "spx"
+            "transformer": "spx_ma50"
           },
           {
             "market": "SPX",
-            "transformer": "spx_ma50",
-            "output_name": "spx_ma50"
-          },
+            "transformer": "spx_ma200"
+          }
+        ]
+      },
+      {
+        "id": "market_strength_rising",
+        "type": "GreaterThan",
+        "inputs": [
           {
             "market": "SPX",
-            "transformer": "spx_ma200",
-            "output_name": "spx_ma200"
+            "transformer": "spx_rs"
           },
           {
+            "type": "Constant",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "market_environment_bullish",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "market_uptrend"
+          },
+          {
+            "ref": "market_strength_rising"
+          }
+        ]
+      },
+      {
+        "id": "market_price_reference",
+        "type": "GreaterThan",
+        "inputs": [
+          {
             "market": "SPX",
-            "transformer": "spx_rs",
-            "output_name": "spx_rs"
+            "transformer": "spx_raw"
+          },
+          {
+            "type": "Constant",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "price_and_ma_bullish",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "price_gt_ma_short"
+          },
+          {
+            "ref": "ma_short_gt_ma_long"
+          }
+        ]
+      },
+      {
+        "id": "stock_technical_bullish",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "price_and_ma_bullish"
+          },
+          {
+            "ref": "rsi_not_overbought"
+          }
+        ]
+      },
+      {
+        "id": "buy_signal_condition",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "stock_technical_bullish"
+          },
+          {
+            "ref": "market_environment_bullish"
+          }
+        ]
+      },
+      {
+        "id": "sell_signal_condition",
+        "type": "Or",
+        "inputs": [
+          {
+            "type": "Not",
+            "inputs": [
+              {
+                "ref": "market_uptrend"
+              }
+            ]
+          },
+          {
+            "type": "Not",
+            "inputs": [
+              {
+                "ref": "price_gt_ma_short"
+              }
+            ]
           }
         ]
       }
+    ],
+    "outputs": {
+      "buy_signal": "buy_signal_condition",
+      "sell_signal": "sell_signal_condition",
+      "indicators": [
+        {
+          "id": "ma_short",
+          "output_name": "ma_short"
+        },
+        {
+          "id": "ma_long",
+          "output_name": "ma_long"
+        },
+        {
+          "id": "rsi_indicator",
+          "output_name": "rsi"
+        },
+        {
+          "id": "price_gt_ma_short",
+          "output_name": "price_gt_ma"
+        },
+        {
+          "id": "ma_short_gt_ma_long",
+          "output_name": "ma_crossover"
+        },
+        {
+          "id": "rsi_not_overbought",
+          "output_name": "rsi_ok"
+        },
+        {
+          "id": "rsi_not_overbought_direct",
+          "output_name": "rsi_direct"
+        },
+        {
+          "id": "rsi_not_oversold",
+          "output_name": "rsi_gt_30"
+        },
+        {
+          "id": "price_ma_bull",
+          "output_name": "price_ma_bull"
+        },
+        {
+          "id": "market_uptrend",
+          "output_name": "mkt_uptrend"
+        },
+        {
+          "id": "market_strength_rising",
+          "output_name": "mkt_strength"
+        },
+        {
+          "id": "market_environment_bullish",
+          "output_name": "mkt_bullish"
+        },
+        {
+          "id": "market_price_reference",
+          "output_name": "spx_ref"
+        },
+        {
+          "id": "stock_technical_bullish",
+          "output_name": "stock_bullish"
+        },
+        {
+          "id": "buy_signal_condition",
+          "output_name": "buy_condition"
+        },
+        {
+          "id": "sell_signal_condition",
+          "output_name": "sell_condition"
+        }
+      ],
+      "market_indicators": [
+        {
+          "market": "SPX",
+          "transformer": "spx_raw",
+          "output_name": "spx"
+        },
+        {
+          "market": "SPX",
+          "transformer": "spx_ma50",
+          "output_name": "spx_ma50"
+        },
+        {
+          "market": "SPX",
+          "transformer": "spx_ma200",
+          "output_name": "spx_ma200"
+        },
+        {
+          "market": "SPX",
+          "transformer": "spx_rs",
+          "output_name": "spx_rs"
+        }
+      ]
     }
   }
 }

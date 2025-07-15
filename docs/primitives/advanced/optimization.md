@@ -48,226 +48,298 @@ VIX指数（芝加哥期权交易所波动率指数）被广泛认为是市场�
 
 ### 初始策略配置
 
-以下是我们要优化的策略的完整配置：
+以下是我们要优化的策略：
 
 ```json
 {
-  "name": "市场指标过滤策略组合",
-  "code": "myinvestpilot_market_filtered",
-  "description": "基于VIX指数的市场环境过滤策略，结合价格动量和技术指标",
-  "strategy_definition": {
-    "market_indicators": {
-      "indicators": [
-        {
-          "code": "VIX"
+  "market_indicators": {
+    "indicators": [
+      {
+        "code": "VIX"
+      }
+    ],
+    "transformers": [
+      {
+        "name": "vix_raw",
+        "type": "IdentityTransformer",
+        "params": {
+          "indicator": "VIX",
+          "field": "Close"
         }
-      ],
-      "transformers": [
-        {
-          "name": "vix_raw",
-          "type": "IdentityTransformer",
-          "params": {
-            "indicator": "VIX",
-            "field": "Close"
-          }
-        },
-        {
-          "name": "vix_percentile",
-          "type": "PercentileRankTransformer",
-          "params": {
-            "indicator": "VIX",
-            "lookback": 252,
-            "field": "Close"
-          }
-        },
-        {
-          "name": "vix_ma",
-          "type": "MovingAverageTransformer",
-          "params": {
-            "indicator": "VIX",
-            "window": 20,
-            "method": "simple",
-            "field": "Close"
-          }
+      },
+      {
+        "name": "vix_percentile",
+        "type": "PercentileRankTransformer",
+        "params": {
+          "indicator": "VIX",
+          "lookback": 252,
+          "field": "Close"
         }
-      ]
-    },
-    "trade_strategy": {
-      "name": "PrimitiveStrategy",
-      "params": {
-        "indicators": [
+      },
+      {
+        "name": "vix_ma",
+        "type": "MovingAverageTransformer",
+        "params": {
+          "indicator": "VIX",
+          "window": 20,
+          "method": "simple",
+          "field": "Close"
+        }
+      }
+    ]
+  },
+  "trade_strategy": {
+    "indicators": [
+      {
+        "id": "ma_indicator",
+        "type": "SMA",
+        "params": {
+          "period": 250,
+          "column": "Close"
+        }
+      },
+      {
+        "id": "atr_indicator",
+        "type": "ATR",
+        "params": {
+          "period": 60
+        }
+      },
+      {
+        "id": "chandelier_exit_indicator",
+        "type": "ChandelierExit",
+        "params": {
+          "period": 60,
+          "multiplier": 4
+        }
+      },
+      {
+        "id": "constant_75",
+        "type": "Constant",
+        "params": {
+          "value": 75
+        }
+      }
+    ],
+    "signals": [
+      {
+        "id": "price_gt_ma",
+        "type": "GreaterThan",
+        "inputs": [
           {
-            "id": "ma_indicator",
-            "type": "SMA",
-            "params": {
-              "window": 50,
-              "field": "Close"
-            }
+            "column": "Close"
           },
           {
-            "id": "atr_indicator",
-            "type": "ATR",
-            "params": {
-              "window": 14,
-              "field": "Close"
-            }
+            "ref": "ma_indicator"
+          }
+        ]
+      },
+      {
+        "id": "price_gt_ce",
+        "type": "GreaterThan",
+        "inputs": [
+          {
+            "column": "Close"
           },
           {
-            "id": "chandelier_exit_indicator",
-            "type": "ChandelierExit",
-            "params": {
-              "window": 22,
-              "multiplier": 3,
-              "field": "Close"
-            }
+            "ref": "chandelier_exit_indicator"
+          }
+        ]
+      },
+      {
+        "id": "market_volatility_low",
+        "type": "LessThan",
+        "epsilon": 0.5,
+        "inputs": [
+          {
+            "market": "VIX",
+            "transformer": "vix_percentile"
           },
           {
-            "id": "constant_80",
-            "type": "Constant",
-            "params": {
-              "value": 80
-            }
+            "ref": "constant_75"
+          }
+        ]
+      },
+      {
+        "id": "market_volatility_declining",
+        "type": "LessThan",
+        "inputs": [
+          {
+            "market": "VIX",
+            "transformer": "vix_raw"
           },
           {
-            "id": "market_volatility_low",
-            "type": "LessThan",
+            "market": "VIX",
+            "transformer": "vix_ma"
+          }
+        ]
+      },
+      {
+        "id": "price_lt_ma",
+        "type": "LessThan",
+        "inputs": [
+          {
+            "ref": "ma_indicator"
+          },
+          {
+            "column": "Close"
+          }
+        ]
+      },
+      {
+        "id": "price_lt_ce",
+        "type": "LessThan",
+        "inputs": [
+          {
+            "ref": "chandelier_exit_indicator"
+          },
+          {
+            "column": "Close"
+          }
+        ]
+      },
+      {
+        "id": "market_condition_good",
+        "type": "Or",
+        "inputs": [
+          {
+            "ref": "market_volatility_low"
+          },
+          {
+            "ref": "market_volatility_declining"
+          }
+        ]
+      },
+      {
+        "id": "price_conditions",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "price_gt_ma"
+          },
+          {
+            "ref": "price_gt_ce"
+          }
+        ]
+      },
+      {
+        "id": "technical_buy_conditions",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "price_conditions"
+          },
+          {
+            "ref": "price_gt_ma"
+          }
+        ]
+      },
+      {
+        "id": "buy_signal_condition",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "technical_buy_conditions"
+          },
+          {
+            "ref": "market_condition_good"
+          }
+        ]
+      },
+      {
+        "id": "price_conditions_sell",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "price_lt_ma"
+          },
+          {
+            "ref": "price_lt_ce"
+          }
+        ]
+      },
+      {
+        "id": "sell_signal_condition",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "price_conditions_sell"
+          },
+          {
+            "type": "Not",
             "inputs": [
-              { "market": "VIX", "transformer": "vix_percentile" },
-              { "ref": "constant_80" }
-            ]
-          },
-          {
-            "id": "market_volatility_declining",
-            "type": "LessThan",
-            "inputs": [
-              { "market": "VIX", "transformer": "vix_raw" },
-              { "market": "VIX", "transformer": "vix_ma" }
-            ]
-          },
-          {
-            "id": "market_condition_good",
-            "type": "Or",
-            "inputs": [
-              { "ref": "market_volatility_low" },
-              { "ref": "market_volatility_declining" }
-            ]
-          },
-          {
-            "id": "price_gt_ma",
-            "type": "GreaterThan",
-            "inputs": [
-              { "column": "Close" },
-              { "ref": "ma_indicator" }
-            ]
-          },
-          {
-            "id": "price_gt_ce",
-            "type": "GreaterThan",
-            "inputs": [
-              { "column": "Close" },
-              { "ref": "chandelier_exit_indicator" }
-            ]
-          },
-          {
-            "id": "price_conditions",
-            "type": "And",
-            "inputs": [
-              { "ref": "price_gt_ma" },
-              { "ref": "price_gt_ce" }
-            ]
-          },
-          {
-            "id": "buy_signal_condition",
-            "type": "And",
-            "inputs": [
-              { "ref": "price_conditions" },
-              { "ref": "market_condition_good" }
-            ]
-          },
-          {
-            "id": "price_lt_ma",
-            "type": "LessThan",
-            "inputs": [
-              { "column": "Close" },
-              { "ref": "ma_indicator" }
-            ]
-          },
-          {
-            "id": "price_lt_ce",
-            "type": "LessThan",
-            "inputs": [
-              { "column": "Close" },
-              { "ref": "chandelier_exit_indicator" }
-            ]
-          },
-          {
-            "id": "price_conditions_sell",
-            "type": "And",
-            "inputs": [
-              { "ref": "price_lt_ma" },
-              { "ref": "price_lt_ce" }
-            ]
-          },
-          {
-            "id": "sell_signal_condition",
-            "type": "And",
-            "inputs": [
-              { "ref": "price_conditions_sell" },
               {
-                "type": "Not",
-                "inputs": [{ "ref": "buy_signal_condition" }]
+                "ref": "market_condition_good"
               }
             ]
           }
-        ],
-        "outputs": {
-          "buy_signal": "buy_signal_condition",
-          "sell_signal": "sell_signal_condition",
-          "indicators": [
-            { "id": "ma_indicator", "output_name": "ma" },
-            { "id": "atr_indicator", "output_name": "atr" },
-            { "id": "chandelier_exit_indicator", "output_name": "chandelier_stop" },
-            { "id": "market_volatility_low", "output_name": "vix_percentile_low" },
-            { "id": "market_volatility_declining", "output_name": "vix_declining" },
-            { "id": "market_condition_good", "output_name": "market_ok" },
-            { "id": "buy_signal_condition", "output_name": "buy_condition" },
-            { "id": "sell_signal_condition", "output_name": "sell_condition" }
-          ],
-          "market_indicators": [
-            {
-              "market": "VIX",
-              "transformer": "vix_raw",
-              "output_name": "vix"
-            },
-            {
-              "market": "VIX",
-              "transformer": "vix_percentile",
-              "output_name": "vix_percentile"
-            },
-            {
-              "market": "VIX",
-              "transformer": "vix_ma",
-              "output_name": "vix_ma20"
-            }
-          ]
+        ]
+      }
+    ],
+    "outputs": {
+      "buy_signal": "buy_signal_condition",
+      "sell_signal": "sell_signal_condition",
+      "indicators": [
+        {
+          "id": "ma_indicator",
+          "output_name": "ma"
+        },
+        {
+          "id": "atr_indicator",
+          "output_name": "atr"
+        },
+        {
+          "id": "chandelier_exit_indicator",
+          "output_name": "chandelier_stop"
+        },
+        {
+          "id": "market_volatility_low",
+          "output_name": "vix_percentile_low"
+        },
+        {
+          "id": "market_volatility_declining",
+          "output_name": "vix_declining"
+        },
+        {
+          "id": "market_condition_good",
+          "output_name": "market_ok"
+        },
+        {
+          "id": "price_conditions",
+          "output_name": "price_conditions"
+        },
+        {
+          "id": "technical_buy_conditions",
+          "output_name": "tech_buy"
+        },
+        {
+          "id": "buy_signal_condition",
+          "output_name": "buy_condition"
+        },
+        {
+          "id": "sell_signal_condition",
+          "output_name": "sell_condition"
         }
-      }
-    },
-    "capital_strategy": {
-      "name": "PercentCapitalStrategy",
-      "params": {
-        "initial_capital": 100000,
-        "percents": 33
-      }
+      ],
+      "market_indicators": [
+        {
+          "market": "VIX",
+          "transformer": "vix_raw",
+          "output_name": "vix_raw"
+        },
+        {
+          "market": "VIX",
+          "transformer": "vix_percentile",
+          "output_name": "vix_percentile"
+        },
+        {
+          "market": "VIX",
+          "transformer": "vix_ma",
+          "output_name": "vix_ma"
+        }
+      ]
     }
-  },
-  "symbols": [
-    {"symbol": "QQQ", "name": "Nasdaq 100 ETF"},
-    {"symbol": "SPY", "name": "S&P 500 ETF"},
-    {"symbol": "IWM", "name": "Russell 2000 ETF"}
-  ],
-  "start_date": "2018-01-01",
-  "end_date": "2025-05-17"
+  }
 }
 ```
 

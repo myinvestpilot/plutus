@@ -928,192 +928,247 @@
 ### 完整配置
 ```json
 {
-  "name": "多因子动量策略（数学运算增强）",
-  "code": "multi_factor_momentum_math",
-  "description": "使用纯数学运算计算信号强度的多因子策略",
-  "strategy_definition": {
-    "trade_strategy": {
+  "trade_strategy": {
+    "indicators": [
+      {
+        "id": "macd_indicator",
+        "type": "MACD",
+        "params": {
+          "column": "Close",
+          "fast_period": 12,
+          "slow_period": 26,
+          "signal_period": 9
+        }
+      },
+      {
+        "id": "volume_ma",
+        "type": "SMA",
+        "params": {
+          "column": "Volume",
+          "period": 20
+        }
+      },
+      {
+        "id": "price_ma_short",
+        "type": "SMA",
+        "params": {
+          "column": "Close",
+          "period": 10
+        }
+      },
+      {
+        "id": "price_ma_long",
+        "type": "SMA",
+        "params": {
+          "column": "Close",
+          "period": 20
+        }
+      },
+      {
+        "id": "atr_indicator",
+        "type": "ATR",
+        "params": {
+          "period": 14
+        }
+      }
+    ],
+    "signals": [
+      {
+        "id": "volume_ratio",
+        "type": "Divide",
+        "params": {
+          "return_calculation": true
+        },
+        "inputs": [
+          {
+            "column": "Volume"
+          },
+          {
+            "ref": "volume_ma"
+          }
+        ]
+      },
+      {
+        "id": "macd_difference",
+        "type": "Subtract",
+        "params": {
+          "return_calculation": true
+        },
+        "inputs": [
+          {
+            "ref": "macd_indicator.macd"
+          },
+          {
+            "ref": "macd_indicator.signal"
+          }
+        ]
+      },
+      {
+        "id": "macd_atr_ratio",
+        "type": "Divide",
+        "params": {
+          "return_calculation": true
+        },
+        "inputs": [
+          {
+            "ref": "macd_difference"
+          },
+          {
+            "ref": "atr_indicator"
+          }
+        ]
+      },
+      {
+        "id": "ma_difference",
+        "type": "Subtract",
+        "params": {
+          "return_calculation": true
+        },
+        "inputs": [
+          {
+            "ref": "price_ma_short"
+          },
+          {
+            "ref": "price_ma_long"
+          }
+        ]
+      },
+      {
+        "id": "ma_close_ratio",
+        "type": "Divide",
+        "params": {
+          "return_calculation": true
+        },
+        "inputs": [
+          {
+            "ref": "ma_difference"
+          },
+          {
+            "column": "Close"
+          }
+        ]
+      },
+      {
+        "id": "signal_strength",
+        "type": "Multiply",
+        "params": {
+          "return_calculation": true
+        },
+        "inputs": [
+          {
+            "ref": "macd_atr_ratio"
+          },
+          {
+            "ref": "ma_close_ratio"
+          },
+          {
+            "type": "Constant",
+            "value": 100
+          }
+        ]
+      },
+      {
+        "id": "volume_filter",
+        "type": "LessThan",
+        "inputs": [
+          {
+            "ref": "volume_ratio"
+          },
+          {
+            "type": "Constant",
+            "value": 3
+          }
+        ]
+      },
+      {
+        "id": "signal_threshold",
+        "type": "GreaterThan",
+        "inputs": [
+          {
+            "ref": "signal_strength"
+          },
+          {
+            "type": "Constant",
+            "value": 0.5
+          }
+        ]
+      },
+      {
+        "id": "buy_signal",
+        "type": "And",
+        "inputs": [
+          {
+            "ref": "signal_threshold"
+          },
+          {
+            "ref": "volume_filter"
+          },
+          {
+            "type": "GreaterThan",
+            "inputs": [
+              {
+                "ref": "volume_ratio"
+              },
+              {
+                "type": "Constant",
+                "value": 1.2
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "sell_signal",
+        "type": "Or",
+        "inputs": [
+          {
+            "type": "LessThan",
+            "inputs": [
+              {
+                "ref": "signal_strength"
+              },
+              {
+                "type": "Constant",
+                "value": -0.3
+              }
+            ]
+          },
+          {
+            "type": "GreaterThan",
+            "inputs": [
+              {
+                "ref": "volume_ratio"
+              },
+              {
+                "type": "Constant",
+                "value": 3
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "buy_signal": "buy_signal",
+      "sell_signal": "sell_signal",
       "indicators": [
         {
-          "id": "macd_indicator",
-          "type": "MACD",
-          "params": {
-            "column": "Close",
-            "fast_period": 12,
-            "slow_period": 26,
-            "signal_period": 9
-          }
+          "id": "signal_strength",
+          "output_name": "signal_score"
         },
-        {
-          "id": "volume_ma",
-          "type": "SMA",
-          "params": {
-            "column": "Volume",
-            "period": 20
-          }
-        },
-        {
-          "id": "price_ma_short",
-          "type": "SMA",
-          "params": {
-            "column": "Close",
-            "period": 10
-          }
-        },
-        {
-          "id": "price_ma_long",
-          "type": "SMA",
-          "params": {
-            "column": "Close",
-            "period": 20
-          }
-        },
-        {
-          "id": "atr_indicator",
-          "type": "ATR",
-          "params": {
-            "period": 14
-          }
-        }
-      ],
-      "signals": [
         {
           "id": "volume_ratio",
-          "type": "Divide",
-          "params": {
-            "return_calculation": true
-          },
-          "inputs": [
-            {"column": "Volume"},
-            {"ref": "volume_ma"}
-          ]
-        },
-        {
-          "id": "macd_difference",
-          "type": "Subtract", 
-          "params": {
-            "return_calculation": true
-          },
-          "inputs": [
-            {"ref": "macd_indicator.macd"},
-            {"ref": "macd_indicator.signal"}
-          ]
+          "output_name": "volume_factor"
         },
         {
           "id": "macd_atr_ratio",
-          "type": "Divide",
-          "params": {
-            "return_calculation": true
-          },
-          "inputs": [
-            {"ref": "macd_difference"},
-            {"ref": "atr_indicator"}
-          ]
-        },
-        {
-          "id": "ma_difference",
-          "type": "Subtract",
-          "params": {
-            "return_calculation": true
-          },
-          "inputs": [
-            {"ref": "price_ma_short"},
-            {"ref": "price_ma_long"}
-          ]
+          "output_name": "macd_momentum"
         },
         {
           "id": "ma_close_ratio",
-          "type": "Divide",
-          "params": {
-            "return_calculation": true
-          },
-          "inputs": [
-            {"ref": "ma_difference"},
-            {"column": "Close"}
-          ]
-        },
-        {
-          "id": "signal_strength",
-          "type": "Multiply",
-          "params": {
-            "return_calculation": true
-          },
-          "inputs": [
-            {"ref": "macd_atr_ratio"},
-            {"ref": "ma_close_ratio"},
-            {"type": "Constant", "value": 100.0}
-          ]
-        },
-        {
-          "id": "volume_filter",
-          "type": "LessThan",
-          "inputs": [
-            {"ref": "volume_ratio"},
-            {"type": "Constant", "value": 3.0}
-          ]
-        },
-        {
-          "id": "signal_threshold",
-          "type": "GreaterThan",
-          "inputs": [
-            {"ref": "signal_strength"},
-            {"type": "Constant", "value": 0.5}
-          ]
-        },
-        {
-          "id": "buy_signal",
-          "type": "And",
-          "inputs": [
-            {"ref": "signal_threshold"},
-            {"ref": "volume_filter"},
-            {
-              "type": "GreaterThan",
-              "inputs": [
-                {"ref": "volume_ratio"},
-                {"type": "Constant", "value": 1.2}
-              ]
-            }
-          ]
-        },
-        {
-          "id": "sell_signal",
-          "type": "Or",
-          "inputs": [
-            {
-              "type": "LessThan",
-              "inputs": [
-                {"ref": "signal_strength"},
-                {"type": "Constant", "value": -0.3}
-              ]
-            },
-            {
-              "type": "GreaterThan",
-              "inputs": [
-                {"ref": "volume_ratio"},
-                {"type": "Constant", "value": 3.0}
-              ]
-            }
-          ]
+          "output_name": "ma_trend"
         }
-      ],
-      "outputs": {
-        "buy_signal": "buy_signal",
-        "sell_signal": "sell_signal",
-        "indicators": [
-          {"id": "signal_strength", "output_name": "signal_score"},
-          {"id": "volume_ratio", "output_name": "volume_factor"},
-          {"id": "macd_atr_ratio", "output_name": "macd_momentum"},
-          {"id": "ma_close_ratio", "output_name": "ma_trend"}
-        ]
-      }
-    },
-    "capital_strategy": {
-      "name": "PercentCapitalStrategy",
-      "params": {
-        "initial_capital": 100000,
-        "percents": 60,
-        "max_positions": null
-      }
+      ]
     }
   }
 }

@@ -628,68 +628,75 @@
 
 ```json
 {
-  "name": "股债轮动策略",
-  "symbols": [
-    {"symbol": "510300", "name": "沪深300ETF"},      // 位置0: 股票ETF
-    {"symbol": "511260", "name": "10年期国债ETF"}    // 位置1: 债券ETF
-  ],
-  "strategy_definition": {
-    "market_indicators": {
-      "indicators": [{"code": "000300.SH"}],
-      "transformers": [
-        {
-          "name": "hs300_raw",
-          "type": "IdentityTransformer",
-          "params": {
-            "indicator": "000300.SH",
-            "field": "Close"
-          }
-        },
-        {
-          "name": "hs300_ma200",
-          "type": "MovingAverageTransformer",
-          "params": {
-            "indicator": "000300.SH",
-            "window": 200,
-            "method": "simple",
-            "field": "Close"
-          }
-        }
-      ]
-    },
-    "trade_strategy": {
-      "indicators": [],
-      "signals": [
-        {
-          "id": "market_trend_up",
-          "type": "GreaterThan",
-          "inputs": [
-            {"market": "000300.SH", "transformer": "hs300_raw"},
-            {"market": "000300.SH", "transformer": "hs300_ma200"}
-          ]
-        },
-        {
-          "id": "stock_bond_buy",
-          "type": "StockBondSwitch",
-          "params": {
-            "default_to_stock": true
-          },
-          "inputs": [
-            {"ref": "market_trend_up"}
-          ]
-        },
-        {
-          "id": "stock_bond_sell",
-          "type": "Not",
-          "inputs": [
-            {"ref": "stock_bond_buy"}
-          ]
-        }
-      ],
-      "outputs": {
-        "buy_signal": "stock_bond_buy",
-        "sell_signal": "stock_bond_sell"
+  "market_indicators": {
+    "indicators": [
+      {
+        "code": "000300.SH"
       }
+    ],
+    "transformers": [
+      {
+        "name": "hs300_raw",
+        "type": "IdentityTransformer",
+        "params": {
+          "indicator": "000300.SH",
+          "field": "Close"
+        }
+      },
+      {
+        "name": "hs300_ma200",
+        "type": "MovingAverageTransformer",
+        "params": {
+          "indicator": "000300.SH",
+          "window": 200,
+          "method": "simple",
+          "field": "Close"
+        }
+      }
+    ]
+  },
+  "trade_strategy": {
+    "indicators": [],
+    "signals": [
+      {
+        "id": "market_trend_up",
+        "type": "GreaterThan",
+        "inputs": [
+          {
+            "market": "000300.SH",
+            "transformer": "hs300_raw"
+          },
+          {
+            "market": "000300.SH",
+            "transformer": "hs300_ma200"
+          }
+        ]
+      },
+      {
+        "id": "stock_bond_buy",
+        "type": "StockBondSwitch",
+        "params": {
+          "default_to_stock": true
+        },
+        "inputs": [
+          {
+            "ref": "market_trend_up"
+          }
+        ]
+      },
+      {
+        "id": "stock_bond_sell",
+        "type": "Not",
+        "inputs": [
+          {
+            "ref": "stock_bond_buy"
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "buy_signal": "stock_bond_buy",
+      "sell_signal": "stock_bond_sell"
     }
   }
 }
