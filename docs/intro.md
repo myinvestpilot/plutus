@@ -39,12 +39,17 @@ sidebar_position: 1
 - **经典策略分析**：预设的成熟策略回测分析，帮助理解策略原理
 - **原语策略系统**：使用结构化DSL语言的策略构建工具，供学习研究使用
 
-### 3. 投资教育
+### 3. 市场分析
+- **多市场覆盖**：提供A股、美股、加密货币三个市场的分析
+- **量化指标**：PE百分位、恐惧贪婪指数等专业指标分析
+- **AI解读**：结合新闻热点和数据的市场分析
+
+### 4. 投资教育
 - **策略解析**：详细解释各种投资策略的原理和适用场景
 - **风险教育**：全面展示策略的风险特征，帮助用户理性决策
 - **高级进阶**：提供原语策略系统等高级投资分析工具
 
-### 4. 智能提醒
+### 5. 智能提醒
 - **每日邮件**：策略信号提醒和市场分析
 - **多市场覆盖**：A股、美股、加密币市场的及时信号通知
 
@@ -110,10 +115,17 @@ sidebar_position: 1
 - [官方组合详解](/docs/guides/official-portfolios)
 - [邮件提醒设置](/docs/guides/email-notifications)
 
-### 策略详解
-- [双均线策略](/docs/strategies/dual-moving-average)
-- [吊灯止损策略](/docs/strategies/chandelier-exit)
-- [买入持有策略](/docs/strategies/buy-and-hold)
+### 投资组合
+- [投资组合概览](/docs/portfolios/overview)
+- [交易策略基础概念](/docs/strategies/basic-concepts)
+- [资金策略概览](/docs/capital-strategies/overview)
+
+### 市场分析
+- [市场分析概览](/docs/market-analysis/overview)
+- [A股市场分析](/docs/market-analysis/china-market)
+- [美股市场分析](/docs/market-analysis/us-market)
+- [加密货币市场分析](/docs/market-analysis/crypto-market)
+- [邮件订阅市场分析](/docs/market-analysis/email-subscription)
 
 ### 原语策略
 - [快速入门](/docs/primitives/getting-started)
@@ -123,7 +135,9 @@ sidebar_position: 1
 
 ### 高级主题
 - [原语策略高级主题](/docs/primitives/advanced/market-indicators)
+- [策略的艺术：从逻辑构建到实战优化](/docs/primitives/strategy-design-best-practices.md)
 - [策略优化案例](/docs/primitives/advanced/optimization)
+- [原语组件高级故障排除指南](/docs/primitives/advanced/troubleshooting.md)
 
 ---
 
