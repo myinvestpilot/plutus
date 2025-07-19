@@ -1,6 +1,6 @@
-# FileBasedStrategy
+# 交易记录策略
 
-FileBasedStrategy 是策引平台的一个策略类型，主要给 AI 策略使用。AI Agent 生成交易信号后，这个策略读取这些信号文件来执行回测，分析策略表现。
+交易记录策略（FileBasedStrategy） 是策引平台的一个策略类型，主要给 AI 大模型策略使用。AI Agent 生成交易信号后，这个策略读取这些信号文件来执行回测，分析策略表现。
 
 ## 怎么工作的
 
