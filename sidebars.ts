@@ -38,12 +38,15 @@ const sidebars: SidebarsConfig = {
       label: '投资策略',
       items: [
         'strategies/basic-concepts',
+        'strategies/ai-model-strategy',
         'strategies/buy-and-hold',
         'strategies/dual-moving-average',
         'strategies/macd-strategy',
         'strategies/bollinger-bands',
         'strategies/chandelier-exit',
         'strategies/momentum-rotation',
+        'strategies/file-based-strategy',
+        'strategies/primitive-strategy',
       ],
     },
     {
