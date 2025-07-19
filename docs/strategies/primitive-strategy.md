@@ -119,7 +119,7 @@
 
 ### 详细教程
 想深入学习原语策略，可以查看：
-- [原语策略完整指南](/docs/primitives) - 详细的组件介绍和使用方法
+- [原语策略完整指南](/docs/primitives/getting-started) - 详细的组件介绍和使用方法
 - [策略设计最佳实践](/docs/primitives/strategy-design-best-practices) - 避坑指南和设计技巧
 - [原语编辑器](https://www.myinvestpilot.com/primitives-editor/) - 在线可视化编辑工具
 
@@ -173,4 +173,4 @@
 
 ---
 
-**开始使用**：访问[原语编辑器](https://www.myinvestpilot.com/primitives-editor/)开始构建你的第一个原语策略，或查看[详细教程](/docs/primitives)深入学习。
+**开始使用**：访问[原语编辑器](https://www.myinvestpilot.com/primitives-editor/)开始构建你的第一个原语策略，或查看[详细教程](/docs/primitives/getting-started)深入学习。

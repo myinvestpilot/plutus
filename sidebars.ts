@@ -91,6 +91,17 @@ const sidebars: SidebarsConfig = {
         },
       ],
     },
+    {
+      type: 'category',
+      label: '市场分析',
+      items: [
+        'market-analysis/overview',
+        'market-analysis/china-market',
+        'market-analysis/us-market',
+        'market-analysis/crypto-market',
+        'market-analysis/email-subscription',
+      ],
+    },
   ],
 };
 
