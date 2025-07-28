@@ -18,6 +18,7 @@ const sidebars: SidebarsConfig = {
       label: '核心概念',
       items: [
         'concepts/overview',
+        'concepts/trading-system',
         'concepts/ai-agent',
         'concepts/risk-analysis',
       ],
@@ -26,6 +27,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: '使用指南',
       items: [
+        'guides/user-scenarios',
         'guides/create-portfolio',
         'guides/portfolio-analysis',
         'guides/official-portfolios',

@@ -168,7 +168,8 @@
 ---
 
 **下一步探索**：
-- 了解[AI投资助手](/docs/concepts/ai-agent)功能
+- **重点推荐**：了解[构建个人交易系统](/docs/concepts/trading-system)的完整方法
+- 探索[AI分析引擎](/docs/concepts/ai-agent)的技术能力
 - 学习[风险分析方法](/docs/concepts/risk-analysis)
-- 探索[投资策略](/docs/strategies/basic-concepts)
-- 查看[使用指南](/docs/guides/create-portfolio) 
+- 查看[投资策略基础](/docs/strategies/basic-concepts)
+- 体验[使用场景与学习方法](/docs/guides/user-scenarios) 
