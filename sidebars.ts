@@ -25,6 +25,17 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'AI投资助手',
+      items: [
+        'ai-assistant/product-overview',
+        'ai-assistant/capabilities',
+        'ai-assistant/use-cases',
+        'ai-assistant/best-practices',
+        'ai-assistant/roadmap',
+      ],
+    },
+    {
+      type: 'category',
       label: '使用指南',
       items: [
         'guides/user-scenarios',
